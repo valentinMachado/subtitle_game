@@ -2,6 +2,23 @@ const express = require("express");
 const socketio = require("socket.io");
 const fs = require("fs");
 const path = require("path");
+const crypto = require("crypto");
+
+const gameState = {
+  video: {
+    index: 0,
+    data: null, // vidéo courante (objet config)
+    duration: 0,
+    time: 0,
+    playing: false,
+  },
+
+  players: {
+    // playerId: { name, submitted, subtitles }
+  },
+
+  selectedPlayerId: null,
+};
 
 const app = express();
 const server = app.listen(3000, () =>
@@ -17,93 +34,137 @@ function loadConfig() {
     return config;
   } catch (err) {
     console.error("Erreur de chargement de config.json :", err);
-    return { videos: [] }; // Retourne une config vide en cas d'erreur
+    return { videos: [] };
   }
 }
 
 let config = loadConfig();
-let currentVideoIndex = 0;
-let currentVideo = config.videos[currentVideoIndex] || null;
-let players = new Set();
-let submittedPlayers = new Set();
-let subtitles = [];
+gameState.video.data = config.videos[0] || null;
 
 // Serve les fichiers statiques
 app.use(express.static("public"));
 
 // Gestion des connexions
 io.on("connection", (socket) => {
-  console.log("Nouvelle connexion !");
-  players.add(socket.id);
+  console.log("Nouvelle connexion :", socket.id);
 
-  // Envoie la vidéo courante
-  socket.emit("init", { currentVideo, subtitles });
+  socket.on("register", ({ role, playerName }) => {
+    socket.role = role;
 
-  // Joueur soumet ses sous-titres
-  socket.on("submitSubtitles", (playerSubtitles) => {
-    submittedPlayers.add(socket.id);
-    subtitles.push({ playerId: socket.id, playerSubtitles });
+    if (role === "player") {
+      const playerId = crypto.randomUUID();
+      socket.playerId = playerId;
 
-    // Tous les joueurs ont soumis
-    if (submittedPlayers.size === players.size && players.size > 0) {
-      io.emit("allSubmitted", subtitles);
+      gameState.players[playerId] = {
+        name: playerName || "Joueur",
+        submitted: false,
+        subtitles: [],
+      };
+
+      console.log("Joueur connecté :", playerId);
     }
+
+    console.log(gameState);
+
+    socket.emit("gameState", gameState);
+    socket.broadcast.emit("gameState", gameState);
+  });
+
+  // Contrôles de la télécommande
+  socket.on("remotePlay", () => {
+    gameState.video.playing = true;
+    io.emit("gameState", gameState);
+  });
+
+  socket.on("remotePause", () => {
+    gameState.video.playing = false;
+    io.emit("gameState", gameState);
+  });
+
+  socket.on("remoteSeek", (time) => {
+    gameState.video.time = time;
+    io.emit("gameState", gameState);
+  });
+
+  // Événements de durée et temps
+  socket.on("videoTimeUpdate", (time) => {
+    gameState.video.time = time;
+    io.emit("gameState", gameState);
+  });
+
+  socket.on("videoDurationUpdate", (duration) => {
+    gameState.video.duration = duration;
+    io.emit("gameState", gameState);
+  });
+
+  // Modifie le socket.on("submitSubtitles") comme ceci:
+  socket.on("submitSubtitles", (subtitles) => {
+    if (!socket.playerId) return;
+
+    const player = gameState.players[socket.playerId];
+    if (!player) return;
+
+    player.submitted = true;
+    player.subtitles = subtitles;
+
+    io.emit("gameState", gameState);
   });
 
   // Passer à la vidéo suivante
   socket.on("nextVideo", () => {
-    currentVideoIndex = (currentVideoIndex + 1) % config.videos.length;
-    currentVideo = config.videos[currentVideoIndex];
-    subtitles = [];
-    submittedPlayers.clear();
-    io.emit("videoChanged", currentVideo);
+    gameState.video.index = (gameState.video.index + 1) % config.videos.length;
+
+    gameState.video.data = config.videos[gameState.video.index];
+    gameState.video.duration = 0;
+    gameState.video.time = 0;
+    gameState.video.playing = false;
+    gameState.selectedPlayerId = null;
+
+    Object.values(gameState.players).forEach((p) => {
+      p.submitted = false;
+      p.subtitles = [];
+    });
+
+    io.emit("gameState", gameState);
   });
 
-  socket.on("videoTimeUpdate", (currentTime) => {
-    io.emit("videoTimeUpdate", currentTime); // Relaye à TOUTES les télécommandes
-    // console.log("Relayage de videoTimeUpdate :", currentTime); // Debug
-  });
-
-  socket.on("videoDurationUpdate", (duration) => {
-    io.emit("videoDuration", duration); // Relaye à TOUTES les télécommandes
-    // console.log("Relayage de videoDuration :", duration); // Debug
-  });
-
-  // Dans server.js, à l'intérieur du bloc io.on("connection", (socket) => { ... })
-  socket.on("remotePlay", () => {
-    io.emit("remotePlay"); // Rediffuse à tous les clients (y compris game_screen.html)
-  });
-
-  socket.on("remotePause", () => {
-    io.emit("remotePause"); // Rediffuse à tous les clients
-  });
-
-  socket.on("remoteSeek", (time) => {
-    io.emit("remoteSeek", time); // Rediffuse à tous les clients avec le temps
+  // Sélection d'un joueur pour afficher ses sous-titres
+  socket.on("selectPlayer", (playerId) => {
+    gameState.selectedPlayerId = playerId || null;
+    io.emit("gameState", gameState);
   });
 
   // Déconnexion
   socket.on("disconnect", () => {
-    players.delete(socket.id);
-    submittedPlayers.delete(socket.id);
+    if (socket.playerId) {
+      delete gameState.players[socket.playerId];
+
+      if (gameState.selectedPlayerId === socket.playerId) {
+        gameState.selectedPlayerId = null;
+      }
+
+      io.emit("gameState", gameState);
+
+      console.log("Joueur déconnecté :", socket.playerId);
+    }
   });
 });
 
 // Surveiller les changements de config.json
-fs.watch("public/config.json", (eventType, filename) => {
+fs.watch("public/config.json", (eventType) => {
   if (eventType === "change") {
-    console.log("Fichier config.json modifié, rechargement...");
     const newConfig = loadConfig();
-
-    // Vérifie si la vidéo courante existe toujours
-    if (currentVideoIndex >= newConfig.videos.length) {
-      currentVideoIndex = 0;
-    }
-    currentVideo = newConfig.videos[currentVideoIndex] || null;
     config = newConfig;
 
-    // Notifie tous les clients
-    io.emit("videoChanged", currentVideo);
-    console.log("Nouvelle vidéo envoyée aux clients :", currentVideo?.path);
+    if (gameState.video.index >= config.videos.length) {
+      gameState.video.index = 0;
+    }
+
+    gameState.video.data = config.videos[gameState.video.index] || null;
+    gameState.video.duration = 0;
+    gameState.video.time = 0;
+    gameState.video.playing = false;
+
+    io.emit("gameState", gameState);
   }
 });
