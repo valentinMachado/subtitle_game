@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Écran de Jeu</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+      body,
+      html {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        overflow: hidden;
+        background-color: black;
+        font-family: Arial, sans-serif;
+      }
+
+      #videoContainer {
+        width: 100%;
+        height: 85vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background-color: black;
+        position: relative;
+      }
+
+      #video {
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+      }
+
+      #subtitleOverlay {
+        position: absolute;
+        bottom: 15%;
+        left: 0;
+        right: 0;
+        text-align: center;
+        color: white;
+        text-shadow: 2px 2px 4px black;
+        font-size: 28px;
+        background-color: rgba(0, 0, 0, 0.5);
+        padding: 15px;
+        margin: 0 10%;
+        border-radius: 10px;
+        display: none;
+      }
+
+      #playersContainer {
+        max-width: 800px;
+        margin: 10px auto;
+        padding: 15px;
+        background-color: rgba(0, 0, 0, 0.7);
+        border-radius: 8px;
+        color: white;
+      }
+
+      .playerItem {
+        padding: 10px;
+        margin: 8px 0;
+        background-color: rgba(255, 255, 255, 0.1);
+        border-radius: 4px;
+        display: flex;
+        justify-content: space-between;
+      }
+
+      .playerItem.submitted {
+        background-color: rgba(76, 175, 80, 0.3);
+      }
+
+      #subtitlesDisplay {
+        max-width: 800px;
+        margin: 10px auto;
+        padding: 15px;
+        background-color: rgba(0, 0, 0, 0.7);
+        border-radius: 8px;
+        color: white;
+      }
+
+      .subtitlePlayerItem {
+        padding: 8px;
+        margin: 5px 0;
+        background-color: rgba(255, 255, 255, 0.1);
+        border-radius: 4px;
+      }
+
+      .subtitlePlayerItem.active {
+        background-color: rgba(76, 175, 80, 0.3);
+      }
+
+      #controls {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        z-index: 100;
+      }
+
+      button {
+        padding: 10px 20px;
+        font-size: 16px;
+        background: #4caf50;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        margin-left: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="videoContainer">
+      <video id="video" controls></video>
+      <div id="subtitleOverlay"></div>
+    </div>
+
+    <div id="playersContainer">
+      <h2>Joueurs connectés</h2>
+      <div id="playersList"></div>
+    </div>
+
+    <div id="subtitlesDisplay">
+      <h2>Sous-titres des joueurs</h2>
+      <div id="subtitlesPlayerList"></div>
+    </div>
+
+    <script>
+      const socket = io();
+      const video = document.getElementById("video");
+      const subtitleOverlay = document.getElementById("subtitleOverlay");
+      const playersList = document.getElementById("playersList");
+      const subtitlesPlayerList = document.getElementById(
+        "subtitlesPlayerList"
+      );
+
+      let currentVideo = null;
+      let players = {};
+      let allSubmitted = false;
+      let currentPlayerSubtitles = [];
+
+      // Écouteur pour l'initialisation
+      socket.on("init", (data) => {
+        console.log("Init reçu :", data);
+        if (data.currentVideo) loadVideo(data.currentVideo);
+      });
+
+      // Écouteur pour le changement de vidéo
+      socket.on("videoChanged", (videoData) => {
+        console.log("videoChanged reçu :", videoData);
+        loadVideo(videoData);
+        allSubmitted = false;
+        currentPlayerSubtitles = [];
+        updatePlayersList();
+        updateSubtitlesDisplay();
+      });
+
+      // Charge une vidéo
+      function loadVideo(videoData) {
+        currentVideo = videoData;
+        video.src = videoData.path;
+        video.load();
+        video.play().catch((e) => console.log("Lecture bloquée :", e));
+      }
+
+      // Met à jour la liste des joueurs
+      function updatePlayersList() {
+        playersList.innerHTML = Object.entries(players)
+          .map(
+            ([id, player]) => `
+            <div class="playerItem ${player.submitted ? "submitted" : ""}">
+              <span>${player.name || `Joueur ${id.slice(0, 5)}`}</span>
+              <span>${player.submitted ? "✅ Soumis" : "❌ En attente"}</span>
+            </div>
+          `
+          )
+          .join("");
+      }
+
+      // Met à jour l'affichage des sous-titres des joueurs
+      function updateSubtitlesDisplay() {
+        if (!allSubmitted || currentPlayerSubtitles.length === 0) {
+          subtitlesPlayerList.innerHTML = "<p>Aucun sous-titre soumis.</p>";
+          return;
+        }
+
+        subtitlesPlayerList.innerHTML = currentPlayerSubtitles
+          .map(
+            (playerSubs, index) => `
+            <div>
+              <h3>Joueur ${Object.keys(players)[index]}</h3>
+              ${playerSubs.subtitles
+                .map(
+                  (sub) => `
+                <div class="subtitlePlayerItem" data-start="${
+                  sub.start
+                }" data-end="${sub.end}">
+                  <span>${formatTime(sub.start)} - ${formatTime(
+                    sub.end
+                  )}: </span>
+                  <span>${sub.text}</span>
+                </div>
+              `
+                )
+                .join("")}
+            </div>
+          `
+          )
+          .join("");
+      }
+
+      // Reçoit la liste des joueurs connectés
+      socket.on("playersUpdate", (playersData) => {
+        players = playersData;
+        updatePlayersList();
+      });
+
+      // Reçoit les sous-titres soumis par un joueur
+      socket.on("playerSubmitted", ({ playerId, subtitles }) => {
+        if (players[playerId]) players[playerId].submitted = true;
+        updatePlayersList();
+
+        const playerIndex = currentPlayerSubtitles.findIndex(
+          (subs) => subs.playerId === playerId
+        );
+        if (playerIndex >= 0) {
+          currentPlayerSubtitles[playerIndex] = { playerId, subtitles };
+        } else {
+          currentPlayerSubtitles.push({ playerId, subtitles });
+        }
+
+        if (Object.values(players).every((p) => p.submitted) && !allSubmitted) {
+          allSubmitted = true;
+          updateSubtitlesDisplay();
+        }
+      });
+
+      // Reçoit tous les sous-titres soumis
+      socket.on("allSubmitted", (subtitles) => {
+        allSubmitted = true;
+        currentPlayerSubtitles = subtitles;
+        updateSubtitlesDisplay();
+      });
+
+      // Formate le temps en HH:MM:SS
+      function formatTime(seconds) {
+        const date = new Date(0);
+        date.setSeconds(seconds);
+        return date.toISOString().substr(11, 8);
+      }
+
+      // Met à jour les sous-titres en fonction du temps
+      video.addEventListener("timeupdate", () => {
+        const time = video.currentTime;
+        const activeSubtitles = [];
+
+        if (allSubmitted) {
+          currentPlayerSubtitles.forEach((playerSubs) => {
+            const activeSub = playerSubs.subtitles.find(
+              (s) => time >= s.start && time <= s.end
+            );
+            if (activeSub) activeSubtitles.push(activeSub.text);
+          });
+
+          if (activeSubtitles.length > 0) {
+            subtitleOverlay.textContent = activeSubtitles.join(" | ");
+            subtitleOverlay.style.display = "block";
+          } else {
+            subtitleOverlay.style.display = "none";
+          }
+        }
+
+        if (allSubmitted) {
+          document.querySelectorAll(".subtitlePlayerItem").forEach((el) => {
+            const start = parseFloat(el.dataset.start);
+            const end = parseFloat(el.dataset.end);
+            el.classList.toggle("active", time >= start && time <= end);
+          });
+        }
+      });
+
+      // Écouteur pour jouer les sous-titres d'un joueur spécifique
+      socket.on("playPlayerSubtitles", (playerSubtitlesData) => {
+        currentPlayerSubtitles = [playerSubtitlesData];
+        allSubmitted = true;
+        updateSubtitlesDisplay();
+        video.play().catch((e) => console.log("Lecture bloquée :", e));
+      });
+    </script>
+  </body>
+</html>

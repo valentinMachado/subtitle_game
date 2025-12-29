@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Joueur - Sous-Titres</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 20px;
+        background-color: #f5f5f5;
+      }
+
+      #videoContainer {
+        width: 100%;
+        max-width: 800px;
+        margin: 0 auto 20px;
+        background-color: black;
+        border-radius: 8px;
+        overflow: hidden;
+        position: relative;
+      }
+
+      #video {
+        width: 100%;
+        max-height: 50vh;
+        display: block;
+      }
+
+      #subtitleOverlay {
+        position: absolute;
+        bottom: 20%;
+        left: 0;
+        right: 0;
+        text-align: center;
+        color: white;
+        text-shadow: 1px 1px 3px black;
+        font-size: 24px;
+        background-color: rgba(0, 0, 0, 0.5);
+        padding: 10px;
+        margin: 0 20px;
+        border-radius: 5px;
+        display: none;
+      }
+
+      #subtitleForm {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+        background-color: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        text-align: center;
+      }
+
+      button {
+        padding: 12px 30px;
+        font-size: 16px;
+        background-color: #4caf50;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: background-color 0.3s;
+      }
+
+      button:disabled {
+        background-color: #cccccc;
+        cursor: not-allowed;
+      }
+
+      button:hover:not(:disabled) {
+        background-color: #45a049;
+      }
+
+      #subtitlesList {
+        max-width: 800px;
+        margin: 20px auto;
+        padding: 10px;
+        background-color: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+
+      .subtitleItem {
+        padding: 12px;
+        margin: 8px 0;
+        background-color: #f9f9f9;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .subtitleItem.active {
+        background-color: #e3f2fd;
+        border-left: 4px solid #4caf50;
+      }
+
+      .subtitleTime {
+        color: #666;
+        font-size: 14px;
+        margin-right: 10px;
+      }
+
+      .subtitleInput {
+        flex-grow: 1;
+        padding: 5px;
+        border: 1px solid #ddd;
+        border-radius: 3px;
+        font-size: 14px;
+      }
+
+      .subtitlePlaceholder {
+        color: #999;
+        font-style: italic;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Soumets tes sous-titres !</h1>
+
+    <div id="videoContainer">
+      <video id="video" controls></video>
+      <div id="subtitleOverlay"></div>
+    </div>
+
+    <div id="subtitleForm">
+      <button id="submitButton" onclick="submitAll()" disabled>
+        Soumettre tous les sous-titres
+      </button>
+    </div>
+
+    <div id="subtitlesList"></div>
+
+    <script>
+      const socket = io();
+      const video = document.getElementById("video");
+      const subtitleOverlay = document.getElementById("subtitleOverlay");
+      const subtitlesList = document.getElementById("subtitlesList");
+      const submitButton = document.getElementById("submitButton");
+
+      let currentVideo = null;
+      let playerSubtitles = [];
+
+      // Écouteur pour l'initialisation
+      socket.on("init", (data) => {
+        console.log("Init reçu :", data);
+        if (data.currentVideo) {
+          loadVideo(data.currentVideo);
+        }
+      });
+
+      // Écouteur pour le changement de vidéo
+      socket.on("videoChanged", (videoData) => {
+        console.log("videoChanged reçu :", videoData);
+        loadVideo(videoData);
+      });
+
+      // Charge une vidéo
+      function loadVideo(videoData) {
+        currentVideo = videoData;
+        video.src = videoData.path;
+        video.load();
+        playerSubtitles = videoData.subtitles.map((s) => ({ ...s, text: "" }));
+        renderSubtitlesList();
+      }
+
+      // Affiche le sous-titre actuel sur la vidéo
+      function updateSubtitleOverlay() {
+        const time = video.currentTime;
+        const subtitle = playerSubtitles.find(
+          (s) => time >= s.start && time <= s.end
+        );
+
+        if (subtitle) {
+          subtitleOverlay.textContent = subtitle.text || subtitle.placeholder;
+          subtitleOverlay.style.display = "block";
+        } else {
+          subtitleOverlay.style.display = "none";
+        }
+      }
+
+      // Affiche la liste des sous-titres avec des inputs
+      function renderSubtitlesList() {
+        subtitlesList.innerHTML = playerSubtitles
+          .map(
+            (sub, index) => `
+              <div class="subtitleItem">
+                <span class="subtitleTime">${formatTime(
+                  sub.start
+                )} - ${formatTime(sub.end)}</span>
+                <input
+                  type="text"
+                  class="subtitleInput"
+                  value="${sub.text}"
+                  placeholder="${sub.placeholder}"
+                  onchange="updateSubtitleText(${index}, this.value)"
+                />
+              </div>
+            `
+          )
+          .join("");
+        checkAllSubtitlesFilled();
+      }
+
+      // Met à jour le texte d'un sous-titre
+      function updateSubtitleText(index, text) {
+        playerSubtitles[index].text = text;
+        checkAllSubtitlesFilled();
+        updateSubtitleOverlay();
+      }
+
+      // Formate le temps en HH:MM:SS
+      function formatTime(seconds) {
+        const date = new Date(0);
+        date.setSeconds(seconds);
+        return date.toISOString().substr(11, 8);
+      }
+
+      // Vérifie si tous les sous-titres sont remplis
+      function checkAllSubtitlesFilled() {
+        const allFilled = playerSubtitles.every(
+          (sub) => sub.text.trim() !== ""
+        );
+        submitButton.disabled = !allFilled;
+        submitButton.textContent = allFilled
+          ? "Soumettre tous les sous-titres"
+          : "Remplis tous les sous-titres d'abord";
+      }
+
+      // Soumet tous les sous-titres
+      function submitAll() {
+        socket.emit("submitSubtitles", playerSubtitles);
+        submitButton.disabled = true;
+        submitButton.textContent = "Sous-titres soumis ! ✅";
+      }
+
+      // Met à jour les sous-titres en fonction du temps
+      video.addEventListener("timeupdate", () => {
+        updateSubtitleOverlay();
+        const time = video.currentTime;
+        const activeSubtitle = playerSubtitles.find(
+          (s) => time >= s.start && time <= s.end
+        );
+
+        // Met en surbrillance le sous-titre actif
+        document.querySelectorAll(".subtitleItem").forEach((el, index) => {
+          el.classList.remove("active");
+          if (
+            activeSubtitle &&
+            index === playerSubtitles.indexOf(activeSubtitle)
+          ) {
+            el.classList.add("active");
+          }
+        });
+      });
+    </script>
+  </body>
+</html>
