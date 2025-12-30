@@ -114,7 +114,7 @@ async function addVideoToConfig(videoPath, lang, id) {
 // Exemple d'utilisation
 (async () => {
   try {
-    await addVideoToConfig("./public/videos/bbq.mp4", "de", "bbq");
+    await addVideoToConfig("./public/videos/triste.mp4", "de", "triste");
   } catch (err) {
     console.error("❌ Erreur :", err);
   }

@@ -117,22 +117,27 @@
       const nextButton = document.getElementById("nextButton");
       const video = document.querySelector("video");
 
-      let localPlaying = false;
-      video.controls = localPlaying;
-
       const socket = io();
       socket.emit("register", { role: "game_screen" });
-      let currentVideoIndex = null;
+
       let applyingRemoteChange = false;
       let lastGameState = null;
 
-      socket.on("gameState", (state) => {
-        if (!state.video || !state.video.data) return;
+      let videosById = {};
 
+      fetch("/config.json")
+        .then((r) => r.json())
+        .then((cfg) => {
+          videosById = Object.fromEntries(cfg.videos.map((v) => [v.id, v]));
+        });
+
+      socket.on("gameState", (state) => {
         lastGameState = state;
 
-        applyVideoState(state.video);
+        const videoConfig = videosById[state.video.id];
+        if (!videoConfig) return;
 
+        applyVideoState(state.video, videoConfig);
         updatePlayersList(state);
       });
 
@@ -160,37 +165,32 @@
         time: null,
       };
 
-      function applyVideoState(videoState) {
-        // 1. Changement de vidéo
+      function applyVideoState(videoState, videoConfig) {
         if (lastAppliedVideoState.index !== videoState.index) {
-          lastAppliedVideoState.index = videoState.index;
-          lastAppliedVideoState.playing = null;
-          lastAppliedVideoState.time = null;
+          lastAppliedVideoState = {
+            index: videoState.index,
+            playing: videoState.playing,
+            time: videoState.time,
+          };
 
-          video.src = videoState.data.path;
+          applyingRemoteChange = true;
+          video.src = videoConfig.path;
           video.load();
-          return; // IMPORTANT
+          return;
         }
 
-        // 2. Play / Pause uniquement si changé
-        if (lastAppliedVideoState.playing !== videoState.playing) {
-          lastAppliedVideoState.playing = videoState.playing;
-
-          if (videoState.playing && video.paused) {
-            video.play().catch(() => {});
-          }
-
-          if (!videoState.playing && !video.paused) {
-            video.pause();
-          }
+        if (videoState.playing && video.paused) {
+          applyingRemoteChange = true;
+          video.play().catch(() => {});
         }
 
-        // 3. Seek uniquement si réellement différent
-        if (
-          lastAppliedVideoState.time === null ||
-          Math.abs(video.currentTime - videoState.time) > 0.4
-        ) {
-          lastAppliedVideoState.time = videoState.time;
+        if (!videoState.playing && !video.paused) {
+          applyingRemoteChange = true;
+          video.pause();
+        }
+
+        if (Math.abs(video.currentTime - videoState.time) > 0.4) {
+          applyingRemoteChange = true;
           video.currentTime = videoState.time;
         }
       }
@@ -219,30 +219,28 @@
         if (!lastGameState) return;
 
         const time = video.currentTime;
-        const { video: videoState, selectedPlayerId, players } = lastGameState;
+        const { selectedPlayerId, players, video: videoState } = lastGameState;
+        const videoConfig = videosById[videoState.id];
 
         let activeSubtitle = null;
 
-        // 1. Si un joueur est sélectionné → ses sous-titres
+        // 1. Joueur sélectionné
         if (selectedPlayerId && players[selectedPlayerId]) {
           activeSubtitle = players[selectedPlayerId].subtitles.find(
             (s) => time >= s.start && time <= s.end
           );
         }
-        // 2. Sinon → placeholders de la vidéo
-        else if (videoState.data.subtitles) {
-          activeSubtitle = videoState.data.subtitles.find(
+        // 2. Sous-titres par défaut de la vidéo
+        else if (videoConfig?.subtitles) {
+          const placeholder = videoConfig.subtitles.find(
             (s) => time >= s.start && time <= s.end
           );
 
-          if (activeSubtitle) {
-            activeSubtitle = {
-              text: activeSubtitle.placeholder,
-            };
+          if (placeholder) {
+            activeSubtitle = { text: placeholder.placeholder };
           }
         }
 
-        // 3. Affichage
         if (activeSubtitle) {
           subtitleOverlay.textContent = activeSubtitle.text;
           subtitleOverlay.style.display = "block";

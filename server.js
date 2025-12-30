@@ -1,22 +1,17 @@
 const express = require("express");
 const socketio = require("socket.io");
 const fs = require("fs");
-const path = require("path");
 const crypto = require("crypto");
 
 const gameState = {
   video: {
+    id: null,
     index: 0,
-    data: null, // vidéo courante (objet config)
     duration: 0,
     time: 0,
     playing: false,
   },
-
-  players: {
-    // playerId: { name, submitted, subtitles }
-  },
-
+  players: {},
   selectedPlayerId: null,
 };
 
@@ -26,25 +21,38 @@ const server = app.listen(3000, () =>
 );
 const io = socketio(server);
 
-// Fonction pour charger la configuration
+// ---------- CONFIG ----------
+
 function loadConfig() {
-  try {
-    const config = JSON.parse(fs.readFileSync("public/config.json"));
-    console.log("Configuration rechargée :", config);
-    return config;
-  } catch (err) {
-    console.error("Erreur de chargement de config.json :", err);
-    return { videos: [] };
-  }
+  return JSON.parse(fs.readFileSync("public/config.json"));
 }
 
 let config = loadConfig();
-gameState.video.data = config.videos[0] || null;
+gameState.video.index = 0;
+gameState.video.id = config.videos[0]?.id ?? null;
 
-// Serve les fichiers statiques
+// ---------- GAME STATE RESET ----------
+
+function updateGameState() {
+  gameState.video.duration = 0;
+  gameState.video.time = 0;
+  gameState.video.playing = false;
+  gameState.selectedPlayerId = null;
+
+  Object.values(gameState.players).forEach((p) => {
+    p.submitted = false;
+    p.subtitles = [];
+  });
+
+  io.emit("gameState", gameState);
+}
+
+// ---------- STATIC FILES ----------
+
 app.use(express.static("public"));
 
-// Gestion des connexions
+// ---------- SOCKETS ----------
+
 io.on("connection", (socket) => {
   console.log("Nouvelle connexion :", socket.id);
 
@@ -64,13 +72,12 @@ io.on("connection", (socket) => {
       console.log("Joueur connecté :", playerId);
     }
 
-    console.log(gameState);
-
     socket.emit("gameState", gameState);
     socket.broadcast.emit("gameState", gameState);
   });
 
-  // Contrôles de la télécommande
+  // ----- Remote controls -----
+
   socket.on("remotePlay", () => {
     gameState.video.playing = true;
     io.emit("gameState", gameState);
@@ -86,7 +93,6 @@ io.on("connection", (socket) => {
     io.emit("gameState", gameState);
   });
 
-  // Événements de durée et temps
   socket.on("videoTimeUpdate", (time) => {
     gameState.video.time = time;
     io.emit("gameState", gameState);
@@ -97,7 +103,8 @@ io.on("connection", (socket) => {
     io.emit("gameState", gameState);
   });
 
-  // Modifie le socket.on("submitSubtitles") comme ceci:
+  // ----- Subtitles -----
+
   socket.on("submitSubtitles", (subtitles) => {
     if (!socket.playerId) return;
 
@@ -110,61 +117,68 @@ io.on("connection", (socket) => {
     io.emit("gameState", gameState);
   });
 
-  // Passer à la vidéo suivante
+  // ----- Video navigation -----
+
   socket.on("nextVideo", () => {
     gameState.video.index = (gameState.video.index + 1) % config.videos.length;
 
-    gameState.video.data = config.videos[gameState.video.index];
-    gameState.video.duration = 0;
-    gameState.video.time = 0;
-    gameState.video.playing = false;
-    gameState.selectedPlayerId = null;
-
-    Object.values(gameState.players).forEach((p) => {
-      p.submitted = false;
-      p.subtitles = [];
-    });
-
-    io.emit("gameState", gameState);
+    gameState.video.id = config.videos[gameState.video.index].id;
+    updateGameState();
   });
 
-  // Sélection d'un joueur pour afficher ses sous-titres
+  socket.on("previousVideo", () => {
+    gameState.video.index =
+      (gameState.video.index - 1 + config.videos.length) % config.videos.length;
+
+    gameState.video.id = config.videos[gameState.video.index].id;
+    updateGameState();
+  });
+
+  socket.on("selectVideoById", (videoId) => {
+    const index = config.videos.findIndex((v) => v.id === videoId);
+    if (index === -1) return;
+
+    gameState.video.index = index;
+    gameState.video.id = videoId;
+    updateGameState();
+  });
+
+  // ----- Player selection -----
+
   socket.on("selectPlayer", (playerId) => {
     gameState.selectedPlayerId = playerId || null;
     io.emit("gameState", gameState);
   });
 
-  // Déconnexion
+  // ----- Disconnect -----
+
   socket.on("disconnect", () => {
-    if (socket.playerId) {
-      delete gameState.players[socket.playerId];
+    if (!socket.playerId) return;
 
-      if (gameState.selectedPlayerId === socket.playerId) {
-        gameState.selectedPlayerId = null;
-      }
+    delete gameState.players[socket.playerId];
 
-      io.emit("gameState", gameState);
-
-      console.log("Joueur déconnecté :", socket.playerId);
+    if (gameState.selectedPlayerId === socket.playerId) {
+      gameState.selectedPlayerId = null;
     }
+
+    io.emit("gameState", gameState);
+    console.log("Joueur déconnecté :", socket.playerId);
   });
 });
 
-// Surveiller les changements de config.json
-fs.watch("public/config.json", (eventType) => {
-  if (eventType === "change") {
-    const newConfig = loadConfig();
-    config = newConfig;
+// ---------- CONFIG HOT RELOAD ----------
 
-    if (gameState.video.index >= config.videos.length) {
-      gameState.video.index = 0;
-    }
+fs.watch("public/config.json", () => {
+  config = loadConfig();
 
-    gameState.video.data = config.videos[gameState.video.index] || null;
-    gameState.video.duration = 0;
-    gameState.video.time = 0;
-    gameState.video.playing = false;
+  const index = config.videos.findIndex((v) => v.id === gameState.video.id);
 
-    io.emit("gameState", gameState);
+  if (index === -1) {
+    gameState.video.index = 0;
+    gameState.video.id = config.videos[0]?.id ?? null;
+  } else {
+    gameState.video.index = index;
   }
+
+  updateGameState();
 });

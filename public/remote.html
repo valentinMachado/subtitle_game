@@ -26,7 +26,6 @@
       #seekContainer {
         margin: 20px 0;
       }
-
       #seekBar {
         width: 80%;
       }
@@ -54,7 +53,6 @@
       .playerItem.submitted {
         background: #e8f5e9;
       }
-
       .playerItem.selected {
         background: #ffeb3b;
       }
@@ -70,7 +68,17 @@
       <input type="range" id="seekBar" min="0" max="100" value="0" />
     </div>
 
+    <button id="previousButton">Vidéo précédente</button>
     <button id="nextButton">Vidéo suivante</button>
+
+    <div id="videoSelectContainer">
+      <select
+        id="videoSelect"
+        style="width: 80%; font-size: 16px; padding: 10px"
+      >
+        <option value="">Sélectionner une vidéo</option>
+      </select>
+    </div>
 
     <div id="playersContainer">
       <h2>Joueurs connectés</h2>
@@ -79,28 +87,29 @@
 
     <script>
       const socket = io();
+      let videosById = {};
+      let videoDuration = 0;
+      let isSeeking = false;
+
       const playButton = document.getElementById("playButton");
       const pauseButton = document.getElementById("pauseButton");
       const seekBar = document.getElementById("seekBar");
+      const previousButton = document.getElementById("previousButton");
       const nextButton = document.getElementById("nextButton");
       const playersList = document.getElementById("playersList");
+      const videoSelect = document.getElementById("videoSelect");
 
-      let videoDuration = 0;
-      let isSeeking = false; // pour éviter les boucles
-
-      socket.on("connect", () => {
-        console.log("Télécommande connectée :", socket.id);
-      });
+      // Charger config des vidéos
+      fetch("/config.json")
+        .then((r) => r.json())
+        .then((cfg) => {
+          videosById = Object.fromEntries(cfg.videos.map((v) => [v.id, v]));
+        });
 
       socket.emit("register", { role: "remote" });
 
-      playButton.addEventListener("click", () => {
-        socket.emit("remotePlay");
-      });
-
-      pauseButton.addEventListener("click", () => {
-        socket.emit("remotePause");
-      });
+      playButton.addEventListener("click", () => socket.emit("remotePlay"));
+      pauseButton.addEventListener("click", () => socket.emit("remotePause"));
 
       seekBar.addEventListener("input", () => {
         if (videoDuration > 0) {
@@ -110,55 +119,72 @@
         }
       });
 
-      socket.on("gameState", (state) => {
-        if (!state.video || !state.video.data) return;
+      previousButton.addEventListener("click", () =>
+        socket.emit("previousVideo")
+      );
+      nextButton.addEventListener("click", () => socket.emit("nextVideo"));
 
-        // Mise à jour de la durée et du slider
+      videoSelect.addEventListener("change", () => {
+        const videoId = videoSelect.value;
+        if (videoId) socket.emit("selectVideoById", videoId);
+      });
+
+      socket.on("gameState", (state) => {
+        const video = videosById[state.video.id];
+        if (!video) return;
+
         videoDuration = state.video.duration;
 
-        // Si on ne fait pas un seek depuis le remote, on met à jour le slider
+        // Seek bar
         if (!isSeeking && videoDuration > 0) {
-          const percentage = (state.video.time / videoDuration) * 100;
-          seekBar.value = percentage;
-        } else {
-          // Fin du seek depuis la télécommande
-          isSeeking = false;
+          seekBar.value = (state.video.time / videoDuration) * 100;
         }
+        isSeeking = false;
+
+        // Boutons lecture/pause
+        playButton.disabled = state.video.playing;
+        pauseButton.disabled = !state.video.playing;
+
+        // Joueurs
+        renderPlayers(state.players, state.selectedPlayerId);
+
+        // Sélecteur de vidéo
+        renderVideoSelect(state.video.id);
       });
 
-      socket.on("gameState", (state) => {
-        if (state.video.playing) {
-          playButton.disabled = true;
-          pauseButton.disabled = false;
-        } else {
-          playButton.disabled = false;
-          pauseButton.disabled = true;
-        }
-      });
-
-      socket.on("gameState", (state) => {
-        playersList.innerHTML = Object.entries(state.players)
+      function renderPlayers(players, selectedId) {
+        playersList.innerHTML = Object.entries(players)
           .map(
-            ([id, player]) => `
-      <div class="playerItem ${player.submitted ? "submitted" : ""} ${
-              state.selectedPlayerId === id ? "selected" : ""
+            ([id, p]) => `
+          <div class="playerItem ${p.submitted ? "submitted" : ""} ${
+              selectedId === id ? "selected" : ""
             }"
-        onclick="selectPlayer('${id}')">
-        <span>${player.name}</span>
-        <span>${player.submitted ? "✅" : "❌"}</span>
-      </div>
-    `
+               onclick="selectPlayer('${id}')">
+            <span>${p.name}</span>
+            <span>${p.submitted ? "✅" : "❌"}</span>
+          </div>
+        `
           )
           .join("");
-      });
+      }
+
+      function renderVideoSelect(activeId) {
+        videoSelect.innerHTML =
+          `<option value="">Sélectionner une vidéo</option>` +
+          Object.values(videosById)
+            .map(
+              (v) => `
+            <option value="${v.id}" ${v.id === activeId ? "selected" : ""}>
+              ${v.title || v.id}
+            </option>
+          `
+            )
+            .join("");
+      }
 
       function selectPlayer(playerId) {
         socket.emit("selectPlayer", playerId);
       }
-
-      nextButton.addEventListener("click", () => {
-        socket.emit("nextVideo");
-      });
     </script>
   </body>
 </html>
