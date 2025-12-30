@@ -138,4 +138,6 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 
-public/videos/**
+/public/videos/**
+/public/config.json
+

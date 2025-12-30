@@ -24,7 +24,7 @@ async function downloadVideo(url, outputPath) {
 }
 
 // Exemple d'utilisation
-const url = "https://www.youtube.com/watch?v=gVe_2tDXwvQ";
+const url = "https://www.youtube.com/watch?v=mQMG66SZecs";
 const outputPath = path.join(__dirname, "public/videos/temp_video.mp4");
 
 downloadVideo(url, outputPath)
