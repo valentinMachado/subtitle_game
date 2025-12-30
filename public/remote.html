@@ -99,6 +99,7 @@
         const videoSelect = document.getElementById("videoSelect");
 
         socket.emit("register", { role: "remote" });
+
         playButton.addEventListener("click", () => socket.emit("remotePlay"));
         pauseButton.addEventListener("click", () => socket.emit("remotePause"));
         seekBar.addEventListener("input", () => {

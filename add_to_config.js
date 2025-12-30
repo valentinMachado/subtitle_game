@@ -31,24 +31,29 @@ async function generateTimestamps(videoPath, lang, id) {
 
       console.log(`[2/3] Génération des timestamps avec Whisper tiny...`);
       // Whisper tiny, sortie JSON
-      const whisper = spawn("whisper", [
-        audioPath,
-        "--model",
-        "tiny",
-        "--language",
-        lang,
-        "--output_format",
-        "json",
-        "--output_dir",
-        path.dirname(videoPath),
-      ]);
-
-      let output = "";
-      whisper.stdout.on("data", (data) => (output += data.toString()));
-      whisper.stderr.on("data", (data) =>
-        process.stdout.write(`[whisper] ${data}`)
+      const whisper = spawn(
+        "whisper",
+        [
+          audioPath,
+          "--model",
+          "tiny",
+          "--language",
+          lang,
+          "--output_format",
+          "json",
+          "--output_dir",
+          path.dirname(videoPath),
+        ],
+        {
+          env: { ...process.env, PYTHONIOENCODING: "utf-8" },
+        }
       );
 
+      let output = "";
+      whisper.stdout.on("data", (data) => (output += data.toString("utf8")));
+      whisper.stderr.on("data", (data) =>
+        process.stdout.write(`[whisper] ${data.toString("utf8")}`)
+      );
       whisper.on("close", (code2) => {
         if (code2 !== 0)
           return reject(new Error(`Whisper exited with code ${code2}`));
@@ -114,7 +119,11 @@ async function addVideoToConfig(videoPath, lang, id) {
 // Exemple d'utilisation
 (async () => {
   try {
-    await addVideoToConfig("./public/videos/triste.mp4", "de", "triste");
+    await addVideoToConfig(
+      "./public/videos/on_s_amuse.mp4",
+      "zh",
+      "on_s_amuse"
+    );
   } catch (err) {
     console.error("❌ Erreur :", err);
   }

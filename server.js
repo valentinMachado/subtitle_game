@@ -54,8 +54,6 @@ app.use(express.static("public"));
 // ---------- SOCKETS ----------
 
 io.on("connection", (socket) => {
-  console.log("Nouvelle connexion :", socket.id);
-
   socket.on("register", ({ role, playerName }) => {
     socket.role = role;
 
@@ -69,7 +67,7 @@ io.on("connection", (socket) => {
         subtitles: [],
       };
 
-      console.log("Joueur connecté :", playerId);
+      console.log(playerName, " connected");
     }
 
     socket.emit("gameState", gameState);
@@ -155,6 +153,7 @@ io.on("connection", (socket) => {
   socket.on("disconnect", () => {
     if (!socket.playerId) return;
 
+    console.log(gameState.players[socket.playerId], " disconnected");
     delete gameState.players[socket.playerId];
 
     if (gameState.selectedPlayerId === socket.playerId) {
@@ -162,7 +161,6 @@ io.on("connection", (socket) => {
     }
 
     io.emit("gameState", gameState);
-    console.log("Joueur déconnecté :", socket.playerId);
   });
 });
 

@@ -161,7 +161,6 @@
     </style>
   </head>
   <body>
-    <h1>Soumets tes sous-titres</h1>
     <div id="videoContainer">
       <video id="video" controls></video>
       <div id="subtitleOverlay"></div>
@@ -187,28 +186,51 @@
 
         let videosById = {};
         let playerSubtitles = [];
-        let playerName = "";
+        let playerName = localStorage.getItem("playerName") || "";
         let currentVideoId = null;
         let isEditingSubtitle = false;
 
-        // Charger config
+        // --- Gestion du pseudo ---
+        if (!playerName) {
+          playerName = prompt(
+            "Quel est ton pseudo ?",
+            "Joueur " + Math.floor(Math.random() * 1000)
+          );
+          localStorage.setItem("playerName", playerName);
+        }
+        document.title = `Joueur - ${playerName}`;
+        document.querySelector("#subtitleForm span").textContent = playerName;
+
+        // --- Charger config ---
         await fetch("/config.json")
           .then((r) => r.json())
           .then((cfg) => {
             videosById = Object.fromEntries(cfg.videos.map((v) => [v.id, v]));
           });
 
-        const socket = io();
+        // --- Socket avec options de timeout et reconnexion ---
+        const socket = io({
+          reconnection: true,
+          reconnectionAttempts: Infinity,
+          reconnectionDelay: 1000,
+          timeout: 20000, // 20 secondes au lieu de 5s par défaut
+        });
 
+        // --- Gestion gameState ---
         socket.on("connect", () => {
-          playerName = prompt(
-            "Quel est ton pseudo ?",
-            "Joueur " + Math.floor(Math.random() * 1000)
-          );
-          document.title = `Joueur - ${playerName}`;
-          document.querySelector("h1").textContent = `Bienvenue ${playerName}`;
-          document.querySelector("#subtitleForm span").textContent = playerName;
+          console.log("Connecté au serveur avec pseudo :", playerName);
           socket.emit("register", { role: "player", playerName });
+
+          // Récupérer le cache des sous-titres si videoId correspond
+          if (
+            currentVideoId &&
+            localStorage.getItem(`subs_${currentVideoId}`)
+          ) {
+            playerSubtitles = JSON.parse(
+              localStorage.getItem(`subs_${currentVideoId}`)
+            );
+            renderSubtitlesList();
+          }
         });
 
         socket.on("gameState", (state) => {
@@ -219,19 +241,34 @@
           loadVideo(videoConfig);
         });
 
+        // --- Charger la vidéo ---
         function loadVideo(videoConfig) {
           video.src = videoConfig.path;
           video.load();
-          playerSubtitles =
-            videoConfig.subtitles?.map((s) => ({ ...s, text: "" })) || [];
+
+          // Récupérer les sous-titres en cache si existants et correspondants
+          const cached = localStorage.getItem(`subs_${videoConfig.id}`);
+          if (cached) {
+            playerSubtitles = JSON.parse(cached);
+          } else {
+            playerSubtitles =
+              videoConfig.subtitles?.map((s) => ({ ...s, text: "" })) || [];
+          }
+
           renderSubtitlesList();
 
           // Désactive le submit si un sous-titre est vide
           submitButton.disabled = !playerSubtitles.every(
             (s) => s.text.trim() !== ""
           );
-        }
 
+          // Nettoyer les caches d'autres vidéos
+          Object.keys(localStorage)
+            .filter(
+              (k) => k.startsWith("subs_") && k !== `subs_${videoConfig.id}`
+            )
+            .forEach((k) => localStorage.removeItem(k));
+        }
         function renderSubtitlesList() {
           subtitlesList.innerHTML = playerSubtitles
             .map(
@@ -290,6 +327,12 @@
 
         function updateSubtitleText(index, text) {
           playerSubtitles[index].text = text;
+
+          // Mettre à jour le cache local pour cette vidéo
+          localStorage.setItem(
+            `subs_${currentVideoId}`,
+            JSON.stringify(playerSubtitles)
+          );
 
           // Désactive le bouton si un sous-titre est vide
           submitButton.disabled = !playerSubtitles.every(

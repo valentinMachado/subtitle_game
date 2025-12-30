@@ -96,7 +96,6 @@
         const video = document.querySelector("video");
 
         const socket = io();
-        socket.emit("register", { role: "game_screen" });
 
         let applyingRemoteChange = false;
         let lastGameState = null;
@@ -109,6 +108,9 @@
           .then((cfg) => {
             videosById = Object.fromEntries(cfg.videos.map((v) => [v.id, v]));
           });
+
+        // --- Register as game screen ---
+        socket.emit("register", { role: "game_screen" });
 
         // --- Game state listener ---
         socket.on("gameState", async (state) => {

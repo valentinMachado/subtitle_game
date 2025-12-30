@@ -62,10 +62,10 @@ async function processVideo(inputPath, outputPath, options = {}) {
   try {
     const output = await processVideo(
       "./public/videos/temp_video.mp4",
-      "./public/videos/triste.mp4",
+      "./public/videos/on_s_amuse.mp4",
       {
-        startTime: "00:00:00",
-        endTime: "00:00:30",
+        startTime: "00:05:00",
+        endTime: "00:05:22",
         addBlackBox: true,
         blackBoxHeight: 150,
         blackBoxColor: "black@1",
