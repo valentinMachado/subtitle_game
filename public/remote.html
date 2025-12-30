@@ -6,12 +6,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <style>
       body {
-        font-family: Arial, sans-serif;
+        font-family: Arial;
         text-align: center;
         padding: 20px;
         background: #f0f0f0;
       }
-
       button {
         padding: 15px 30px;
         margin: 10px;
@@ -22,14 +21,12 @@
         border-radius: 5px;
         width: 80%;
       }
-
       #seekContainer {
         margin: 20px 0;
       }
       #seekBar {
         width: 80%;
       }
-
       #playersContainer {
         margin: 20px 0;
         text-align: left;
@@ -39,7 +36,6 @@
         max-height: 300px;
         overflow-y: auto;
       }
-
       .playerItem {
         padding: 8px;
         margin: 5px 0;
@@ -49,7 +45,6 @@
         justify-content: space-between;
         cursor: pointer;
       }
-
       .playerItem.submitted {
         background: #e8f5e9;
       }
@@ -60,17 +55,13 @@
   </head>
   <body>
     <h1>Télécommande</h1>
-
     <button id="playButton">Lecture</button>
     <button id="pauseButton">Pause</button>
-
     <div id="seekContainer">
       <input type="range" id="seekBar" min="0" max="100" value="0" />
     </div>
-
     <button id="previousButton">Vidéo précédente</button>
     <button id="nextButton">Vidéo suivante</button>
-
     <div id="videoSelectContainer">
       <select
         id="videoSelect"
@@ -79,112 +70,109 @@
         <option value="">Sélectionner une vidéo</option>
       </select>
     </div>
-
     <div id="playersContainer">
       <h2>Joueurs connectés</h2>
       <div id="playersList"></div>
     </div>
 
     <script>
-      const socket = io();
-      let videosById = {};
-      let videoDuration = 0;
-      let isSeeking = false;
+      const main = async () => {
+        let videosById = {};
+        await fetch("/config.json")
+          .then((r) => r.json())
+          .then(
+            (cfg) =>
+              (videosById = Object.fromEntries(
+                cfg.videos.map((v) => [v.id, v])
+              ))
+          );
+        const socket = io();
+        let videoDuration = 0,
+          isSeeking = false;
 
-      const playButton = document.getElementById("playButton");
-      const pauseButton = document.getElementById("pauseButton");
-      const seekBar = document.getElementById("seekBar");
-      const previousButton = document.getElementById("previousButton");
-      const nextButton = document.getElementById("nextButton");
-      const playersList = document.getElementById("playersList");
-      const videoSelect = document.getElementById("videoSelect");
+        const playButton = document.getElementById("playButton");
+        const pauseButton = document.getElementById("pauseButton");
+        const seekBar = document.getElementById("seekBar");
+        const previousButton = document.getElementById("previousButton");
+        const nextButton = document.getElementById("nextButton");
+        const playersList = document.getElementById("playersList");
+        const videoSelect = document.getElementById("videoSelect");
 
-      // Charger config des vidéos
-      fetch("/config.json")
-        .then((r) => r.json())
-        .then((cfg) => {
-          videosById = Object.fromEntries(cfg.videos.map((v) => [v.id, v]));
+        socket.emit("register", { role: "remote" });
+        playButton.addEventListener("click", () => socket.emit("remotePlay"));
+        pauseButton.addEventListener("click", () => socket.emit("remotePause"));
+        seekBar.addEventListener("input", () => {
+          if (videoDuration > 0) {
+            const time = (seekBar.value / 100) * videoDuration;
+            isSeeking = true;
+            socket.emit("remoteSeek", time);
+          }
+        });
+        previousButton.addEventListener("click", () =>
+          socket.emit("previousVideo")
+        );
+        nextButton.addEventListener("click", () => socket.emit("nextVideo"));
+        videoSelect.addEventListener("change", () => {
+          const videoId = videoSelect.value;
+          if (videoId) socket.emit("selectVideoById", videoId);
         });
 
-      socket.emit("register", { role: "remote" });
+        socket.on("gameState", (state) => {
+          const video = videosById[state.video.id];
+          if (!video) return;
+          videoDuration = state.video.duration;
 
-      playButton.addEventListener("click", () => socket.emit("remotePlay"));
-      pauseButton.addEventListener("click", () => socket.emit("remotePause"));
+          if (!isSeeking && videoDuration > 0)
+            seekBar.value = (state.video.time / videoDuration) * 100;
+          isSeeking = false;
 
-      seekBar.addEventListener("input", () => {
-        if (videoDuration > 0) {
-          const time = (seekBar.value / 100) * videoDuration;
-          isSeeking = true;
-          socket.emit("remoteSeek", time);
-        }
-      });
+          renderPlayers(state);
+          renderVideoSelect(state.video.id);
+        });
 
-      previousButton.addEventListener("click", () =>
-        socket.emit("previousVideo")
-      );
-      nextButton.addEventListener("click", () => socket.emit("nextVideo"));
-
-      videoSelect.addEventListener("change", () => {
-        const videoId = videoSelect.value;
-        if (videoId) socket.emit("selectVideoById", videoId);
-      });
-
-      socket.on("gameState", (state) => {
-        const video = videosById[state.video.id];
-        if (!video) return;
-
-        videoDuration = state.video.duration;
-
-        // Seek bar
-        if (!isSeeking && videoDuration > 0) {
-          seekBar.value = (state.video.time / videoDuration) * 100;
-        }
-        isSeeking = false;
-
-        // Boutons lecture/pause
-        playButton.disabled = state.video.playing;
-        pauseButton.disabled = !state.video.playing;
-
-        // Joueurs
-        renderPlayers(state.players, state.selectedPlayerId);
-
-        // Sélecteur de vidéo
-        renderVideoSelect(state.video.id);
-      });
-
-      function renderPlayers(players, selectedId) {
-        playersList.innerHTML = Object.entries(players)
-          .map(
-            ([id, p]) => `
-          <div class="playerItem ${p.submitted ? "submitted" : ""} ${
-              selectedId === id ? "selected" : ""
-            }"
-               onclick="selectPlayer('${id}')">
-            <span>${p.name}</span>
-            <span>${p.submitted ? "✅" : "❌"}</span>
-          </div>
-        `
-          )
-          .join("");
-      }
-
-      function renderVideoSelect(activeId) {
-        videoSelect.innerHTML =
-          `<option value="">Sélectionner une vidéo</option>` +
-          Object.values(videosById)
+        function renderPlayers(state) {
+          const players = state.players;
+          playersList.innerHTML = Object.entries(players)
             .map(
-              (v) => `
-            <option value="${v.id}" ${v.id === activeId ? "selected" : ""}>
-              ${v.title || v.id}
-            </option>
-          `
+              ([id, player]) => `
+      <div class="playerItem ${player.submitted ? "submitted" : ""} ${
+                state.selectedPlayerId === id ? "selected" : ""
+              }" data-id="${id}">
+        <span>${player.name}</span>
+        <span>${player.submitted ? "✅" : "❌"}</span>
+      </div>
+    `
             )
             .join("");
-      }
 
-      function selectPlayer(playerId) {
-        socket.emit("selectPlayer", playerId);
-      }
+          // Attache l'événement après avoir généré les éléments
+          document.querySelectorAll(".playerItem").forEach((item) => {
+            item.addEventListener("click", () => {
+              const playerId = item.dataset.id;
+              socket.emit("selectPlayer", playerId);
+            });
+          });
+        }
+
+        function renderVideoSelect(activeId) {
+          videoSelect.innerHTML =
+            `<option value="">Sélectionner une vidéo</option>` +
+            Object.values(videosById)
+              .map(
+                (v) => `
+            <option value="${v.id}" ${v.id === activeId ? "selected" : ""}>${
+                  v.title || v.id
+                }</option>
+          `
+              )
+              .join("");
+        }
+
+        window.selectPlayer = (playerId) =>
+          socket.emit("selectPlayer", playerId);
+      };
+
+      main();
     </script>
   </body>
 </html>

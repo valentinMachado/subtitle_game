@@ -10,6 +10,7 @@
         height: 100%;
         overflow: hidden;
         overscroll-behavior: none;
+        margin: 0;
       }
       * {
         box-sizing: border-box;
@@ -178,158 +179,176 @@
     <div id="subtitlesList"></div>
 
     <script>
-      const socket = io();
-      const video = document.getElementById("video");
-      const subtitleOverlay = document.getElementById("subtitleOverlay");
-      const subtitlesList = document.getElementById("subtitlesList");
-      const submitButton = document.getElementById("submitButton");
+      const main = async () => {
+        const video = document.getElementById("video");
+        const subtitleOverlay = document.getElementById("subtitleOverlay");
+        const subtitlesList = document.getElementById("subtitlesList");
+        const submitButton = document.getElementById("submitButton");
 
-      let playerName = "";
-      let currentVideoId = null;
-      let playerSubtitles = [];
-      let isEditingSubtitle = false;
-      let videosById = {};
+        let videosById = {};
+        let playerSubtitles = [];
+        let playerName = "";
+        let currentVideoId = null;
+        let isEditingSubtitle = false;
 
-      // Register player
-      socket.on("connect", () => {
-        playerName = prompt(
-          "Quel est ton pseudo ?",
-          "Joueur " + Math.floor(Math.random() * 1000)
-        );
-        document.title = `Joueur - ${playerName}`;
-        document.querySelector("h1").textContent = `Bienvenue ${playerName}`;
-        document.querySelector("#subtitleForm span").textContent = playerName;
-        socket.emit("register", { role: "player", playerName });
-      });
+        // Charger config
+        await fetch("/config.json")
+          .then((r) => r.json())
+          .then((cfg) => {
+            videosById = Object.fromEntries(cfg.videos.map((v) => [v.id, v]));
+          });
 
-      // Load video config
-      fetch("/config.json")
-        .then((r) => r.json())
-        .then((cfg) => {
-          videosById = Object.fromEntries(cfg.videos.map((v) => [v.id, v]));
+        const socket = io();
+
+        socket.on("connect", () => {
+          playerName = prompt(
+            "Quel est ton pseudo ?",
+            "Joueur " + Math.floor(Math.random() * 1000)
+          );
+          document.title = `Joueur - ${playerName}`;
+          document.querySelector("h1").textContent = `Bienvenue ${playerName}`;
+          document.querySelector("#subtitleForm span").textContent = playerName;
+          socket.emit("register", { role: "player", playerName });
         });
 
-      // Listen gameState but only load video
-      socket.on("gameState", (state) => {
-        const videoConfig = videosById[state.video.id];
-        if (!videoConfig || currentVideoId === state.video.id) return;
-        currentVideoId = state.video.id;
-        loadVideo(videoConfig);
-      });
+        socket.on("gameState", (state) => {
+          const videoConfig = videosById[state.video.id];
+          if (!videoConfig || currentVideoId === state.video.id) return;
 
-      function loadVideo(videoConfig) {
-        video.src = videoConfig.path;
-        video.load();
-        playerSubtitles =
-          videoConfig.subtitles?.map((s) => ({ ...s, text: "" })) || [];
-        renderSubtitlesList();
-        submitButton.disabled = !playerSubtitles.length;
-      }
-
-      function renderSubtitlesList() {
-        subtitlesList.innerHTML = playerSubtitles
-          .map(
-            (sub, index) => `
-          <div class="subtitleItem" id="subtitle-${index}" data-start="${
-              sub.start
-            }">
-            <span class="subtitleTime">${formatTime(sub.start)} - ${formatTime(
-              sub.end
-            )}</span>
-            <input type="text" class="subtitleInput" placeholder="${
-              sub.placeholder
-            }" value="${sub.text}"
-              onfocus="focusSubtitle(${index}); hideOtherSubtitles(${index});"
-              onblur="isEditingSubtitle=false; showAllSubtitles();"
-              oninput="updateSubtitleText(${index}, this.value)">
-            <button class="seekButton" onclick="seekToSubtitle(${
-              sub.start
-            })">▶</button>
-          </div>
-        `
-          )
-          .join("");
-      }
-
-      // === Subtitles helpers ===
-      function hideOtherSubtitles(focusIndex) {
-        document.querySelectorAll(".subtitleItem").forEach((el, i) => {
-          el.style.display = i === focusIndex ? "flex" : "none";
+          currentVideoId = state.video.id;
+          loadVideo(videoConfig);
         });
-      }
-      function showAllSubtitles() {
-        document
-          .querySelectorAll(".subtitleItem")
-          .forEach((el) => (el.style.display = "flex"));
-      }
 
-      function focusSubtitle(index) {
-        const sub = playerSubtitles[index];
-        if (!sub) return;
-        video.pause();
-        isEditingSubtitle = true;
-        seekToSubtitle(sub.start);
-        setTimeout(() => {
-          document
-            .getElementById(`subtitle-${index}`)
-            .scrollIntoView({ behavior: "smooth", block: "end" });
-        }, 1000);
-      }
+        function loadVideo(videoConfig) {
+          video.src = videoConfig.path;
+          video.load();
+          playerSubtitles =
+            videoConfig.subtitles?.map((s) => ({ ...s, text: "" })) || [];
+          renderSubtitlesList();
 
-      function seekToSubtitle(time) {
-        video.currentTime = Math.min(video.duration, time + 0.1);
-        updateSubtitleOverlay();
-        if (!video.paused) video.play().catch(() => {});
-      }
-
-      function updateSubtitleText(index, text) {
-        playerSubtitles[index].text = text;
-        submitButton.disabled = !playerSubtitles.every(
-          (s) => s.text.trim() !== ""
-        );
-        const sub = playerSubtitles[index];
-        if (sub) {
-          subtitleOverlay.textContent = text || sub.placeholder;
-          subtitleOverlay.style.display = "block";
+          // Désactive le submit si un sous-titre est vide
+          submitButton.disabled = !playerSubtitles.every(
+            (s) => s.text.trim() !== ""
+          );
         }
-      }
 
-      function updateSubtitleOverlay() {
-        const time = video.currentTime;
-        const active = playerSubtitles.find(
-          (s) => time >= s.start && time <= s.end
-        );
-        if (active) {
-          subtitleOverlay.textContent = active.text || active.placeholder;
-          subtitleOverlay.style.display = "block";
-        } else subtitleOverlay.style.display = "none";
+        function renderSubtitlesList() {
+          subtitlesList.innerHTML = playerSubtitles
+            .map(
+              (sub, index) => `
+        <div class="subtitleItem" id="subtitle-${index}" data-start="${
+                sub.start
+              }">
+          <span class="subtitleTime">${formatTime(sub.start)} - ${formatTime(
+                sub.end
+              )}</span>
+          <input type="text" class="subtitleInput" placeholder="${
+            sub.placeholder
+          }" value="${sub.text}"
+            onfocus="focusSubtitle(${index}); hideOtherSubtitles(${index});"
+            onblur="isEditingSubtitle=false; showAllSubtitles();"
+            oninput="updateSubtitleText(${index}, this.value)">
+          <button class="seekButton" onclick="seekToSubtitle(${
+            sub.start
+          })">▶</button>
+        </div>
+      `
+            )
+            .join("");
+        }
 
-        playerSubtitles.forEach((s, i) => {
+        // === Keep hide/show behavior ===
+        function hideOtherSubtitles(focusIndex) {
+          document.querySelectorAll(".subtitleItem").forEach((el, i) => {
+            el.style.display = i === focusIndex ? "flex" : "none";
+          });
+        }
+        function showAllSubtitles() {
           document
-            .getElementById(`subtitle-${i}`)
-            ?.classList.toggle("active", s === active);
+            .querySelectorAll(".subtitleItem")
+            .forEach((el) => (el.style.display = "flex"));
+        }
+
+        function focusSubtitle(index) {
+          const sub = playerSubtitles[index];
+          if (!sub) return;
+          video.pause();
+          isEditingSubtitle = true;
+          seekToSubtitle(sub.start);
+          setTimeout(() => {
+            document
+              .getElementById(`subtitle-${index}`)
+              ?.scrollIntoView({ behavior: "smooth", block: "end" });
+          }, 1000);
+        }
+
+        function seekToSubtitle(time) {
+          video.currentTime = Math.min(video.duration, time + 0.1);
+          updateSubtitleOverlay();
+          if (!video.paused) video.play().catch(() => {});
+        }
+
+        function updateSubtitleText(index, text) {
+          playerSubtitles[index].text = text;
+
+          // Désactive le bouton si un sous-titre est vide
+          submitButton.disabled = !playerSubtitles.every(
+            (s) => s.text.trim() !== ""
+          );
+
+          const sub = playerSubtitles[index];
+          if (sub) {
+            subtitleOverlay.textContent = text || sub.placeholder;
+            subtitleOverlay.style.display = "block";
+          }
+        }
+
+        function updateSubtitleOverlay() {
+          const time = video.currentTime;
+          const active = playerSubtitles.find(
+            (s) => time >= s.start && time <= s.end
+          );
+          if (active) {
+            subtitleOverlay.textContent = active.text || active.placeholder;
+            subtitleOverlay.style.display = "block";
+          } else subtitleOverlay.style.display = "none";
+
+          playerSubtitles.forEach((s, i) => {
+            document
+              .getElementById(`subtitle-${i}`)
+              ?.classList.toggle("active", s === active);
+          });
+
+          if (!isEditingSubtitle && active) {
+            document
+              .getElementById(`subtitle-${playerSubtitles.indexOf(active)}`)
+              ?.scrollIntoView({ behavior: "smooth", block: "center" });
+          }
+        }
+
+        submitButton.addEventListener("click", () => {
+          socket.emit("submitSubtitles", playerSubtitles);
+          submitButton.disabled = true;
+          submitButton.textContent = "Sous-titres soumis ! ✅";
         });
 
-        if (!isEditingSubtitle && active) {
-          document
-            .getElementById(`subtitle-${playerSubtitles.indexOf(active)}`)
-            ?.scrollIntoView({ behavior: "smooth", block: "center" });
+        video.addEventListener("timeupdate", updateSubtitleOverlay);
+
+        function formatTime(sec) {
+          const date = new Date(0);
+          date.setSeconds(sec);
+          return date.toISOString().substr(11, 8);
         }
-      }
 
-      submitButton.addEventListener("click", () => {
-        socket.emit("submitSubtitles", playerSubtitles);
-        submitButton.disabled = true;
-        submitButton.textContent = "Sous-titres soumis ! ✅";
-      });
+        // Expose functions pour inline handlers
+        window.focusSubtitle = focusSubtitle;
+        window.hideOtherSubtitles = hideOtherSubtitles;
+        window.showAllSubtitles = showAllSubtitles;
+        window.updateSubtitleText = updateSubtitleText;
+        window.seekToSubtitle = seekToSubtitle;
+      };
 
-      video.addEventListener("timeupdate", updateSubtitleOverlay);
-
-      function formatTime(sec) {
-        const date = new Date(0);
-        date.setSeconds(sec);
-        return date.toISOString().substr(11, 8);
-      }
+      main();
     </script>
   </body>
 </html>

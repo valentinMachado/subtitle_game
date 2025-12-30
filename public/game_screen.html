@@ -76,24 +76,6 @@
       .playerItem.selected {
         background-color: rgba(255, 165, 0, 0.5);
       }
-
-      #controls {
-        position: fixed;
-        bottom: 20px;
-        right: 20px;
-        z-index: 100;
-      }
-
-      button {
-        padding: 10px 20px;
-        font-size: 16px;
-        background: #4caf50;
-        color: white;
-        border: none;
-        border-radius: 5px;
-        cursor: pointer;
-        margin-left: 10px;
-      }
     </style>
   </head>
   <body>
@@ -107,152 +89,147 @@
       <div id="playersList"></div>
     </div>
 
-    <div id="controls">
-      <button id="nextButton" style="display: none">Vidéo suivante</button>
-    </div>
-
     <script>
-      const subtitleOverlay = document.getElementById("subtitleOverlay");
-      const playersList = document.getElementById("playersList");
-      const nextButton = document.getElementById("nextButton");
-      const video = document.querySelector("video");
+      const main = async () => {
+        const subtitleOverlay = document.getElementById("subtitleOverlay");
+        const playersList = document.getElementById("playersList");
+        const video = document.querySelector("video");
 
-      const socket = io();
-      socket.emit("register", { role: "game_screen" });
+        const socket = io();
+        socket.emit("register", { role: "game_screen" });
 
-      let applyingRemoteChange = false;
-      let lastGameState = null;
+        let applyingRemoteChange = false;
+        let lastGameState = null;
+        let lastAppliedVideoState = { index: null, playing: null, time: null };
+        let videosById = {};
 
-      let videosById = {};
+        // --- Load config ---
+        await fetch("/config.json")
+          .then((r) => r.json())
+          .then((cfg) => {
+            videosById = Object.fromEntries(cfg.videos.map((v) => [v.id, v]));
+          });
 
-      fetch("/config.json")
-        .then((r) => r.json())
-        .then((cfg) => {
-          videosById = Object.fromEntries(cfg.videos.map((v) => [v.id, v]));
+        // --- Game state listener ---
+        socket.on("gameState", async (state) => {
+          lastGameState = state;
+          const videoConfig = videosById[state.video.id];
+          if (!videoConfig) return;
+
+          await applyVideoState(state.video, videoConfig);
+          updatePlayersList(state);
+          applySubtitles();
         });
 
-      socket.on("gameState", (state) => {
-        lastGameState = state;
+        // --- Apply video state safely ---
+        async function applyVideoState(videoState, videoConfig) {
+          if (lastAppliedVideoState.index !== videoState.index) {
+            lastAppliedVideoState = { ...videoState };
+            applyingRemoteChange = true;
+            video.src = videoConfig.path;
+            video.load();
+            try {
+              await video.play().catch(() => {});
+            } finally {
+              applyingRemoteChange = false;
+            }
+            return;
+          }
 
-        const videoConfig = videosById[state.video.id];
-        if (!videoConfig) return;
+          // Play / pause
+          if (videoState.playing && video.paused) {
+            applyingRemoteChange = true;
+            await video.play().catch(() => {});
+            applyingRemoteChange = false;
+          }
 
-        applyVideoState(state.video, videoConfig);
-        updatePlayersList(state);
-      });
+          if (!videoState.playing && !video.paused) {
+            applyingRemoteChange = true;
+            video.pause();
+            applyingRemoteChange = false;
+          }
 
-      function updatePlayersList(state) {
-        const playersList = document.getElementById("playersList");
-        const players = state.players;
+          // Sync time if différence > 0.4s
+          if (Math.abs(video.currentTime - videoState.time) > 0.4) {
+            applyingRemoteChange = true;
+            video.currentTime = videoState.time;
+            applyingRemoteChange = false;
+          }
 
-        playersList.innerHTML = Object.entries(players)
-          .map(
-            ([id, player]) => `
-    <div class="playerItem ${player.submitted ? "submitted" : ""} ${
-              state.selectedPlayerId === id ? "selected" : ""
-            }">
-      <span>${player.name}</span>
-      <span>${player.submitted ? "✅" : "❌"}</span>
-    </div>
-  `
-          )
-          .join("");
-      }
-
-      let lastAppliedVideoState = {
-        index: null,
-        playing: null,
-        time: null,
-      };
-
-      function applyVideoState(videoState, videoConfig) {
-        if (lastAppliedVideoState.index !== videoState.index) {
-          lastAppliedVideoState = {
-            index: videoState.index,
-            playing: videoState.playing,
-            time: videoState.time,
-          };
-
-          applyingRemoteChange = true;
-          video.src = videoConfig.path;
-          video.load();
-          return;
+          lastAppliedVideoState = { ...videoState };
         }
 
-        if (videoState.playing && video.paused) {
-          applyingRemoteChange = true;
-          video.play().catch(() => {});
+        // --- Players list ---
+        function updatePlayersList(state) {
+          const players = state.players;
+          playersList.innerHTML = Object.entries(players)
+            .map(
+              ([id, player]) => `
+        <div class="playerItem ${player.submitted ? "submitted" : ""} ${
+                state.selectedPlayerId === id ? "selected" : ""
+              }">
+          <span>${player.name}</span>
+          <span>${player.submitted ? "✅" : "❌"}</span>
+        </div>
+      `
+            )
+            .join("");
         }
 
-        if (!videoState.playing && !video.paused) {
-          applyingRemoteChange = true;
-          video.pause();
-        }
+        // --- Timeupdate ---
+        video.addEventListener("timeupdate", () => {
+          if (applyingRemoteChange) return;
+          const now = Date.now();
+          if (!video._lastTimeSent || now - video._lastTimeSent > 200) {
+            video._lastTimeSent = now;
+            socket.emit("videoTimeUpdate", video.currentTime);
+          }
+          applySubtitles();
+        });
 
-        if (Math.abs(video.currentTime - videoState.time) > 0.4) {
-          applyingRemoteChange = true;
-          video.currentTime = videoState.time;
-        }
-      }
+        video.addEventListener("loadedmetadata", () => {
+          socket.emit("videoDurationUpdate", video.duration);
+        });
 
-      video.addEventListener("loadedmetadata", () => {
-        socket.emit("videoDurationUpdate", video.duration);
-      });
-      let lastTimeSent = 0;
+        // --- Subtitles ---
+        function applySubtitles() {
+          if (!lastGameState) return;
 
-      video.addEventListener("timeupdate", () => {
-        if (applyingRemoteChange) {
-          applyingRemoteChange = false;
-          return;
-        }
+          const time = video.currentTime;
+          const {
+            selectedPlayerId,
+            players,
+            video: videoState,
+          } = lastGameState;
+          const videoConfig = videosById[videoState.id];
 
-        const now = Date.now();
-        if (now - lastTimeSent > 200) {
-          lastTimeSent = now;
-          socket.emit("videoTimeUpdate", video.currentTime);
-        }
+          let activeSubtitle = null;
 
-        applySubtitles();
-      });
+          // 1. Joueur sélectionné
+          if (selectedPlayerId && players[selectedPlayerId]) {
+            activeSubtitle = players[selectedPlayerId].subtitles.find(
+              (s) => time >= s.start && time <= s.end
+            );
+          }
 
-      function applySubtitles() {
-        if (!lastGameState) return;
+          // 2. Placeholder vidéo
+          if (!activeSubtitle && videoConfig?.subtitles) {
+            const placeholder = videoConfig.subtitles.find(
+              (s) => time >= s.start && time <= s.end
+            );
+            if (placeholder) activeSubtitle = { text: placeholder.placeholder };
+          }
 
-        const time = video.currentTime;
-        const { selectedPlayerId, players, video: videoState } = lastGameState;
-        const videoConfig = videosById[videoState.id];
-
-        let activeSubtitle = null;
-
-        // 1. Joueur sélectionné
-        if (selectedPlayerId && players[selectedPlayerId]) {
-          activeSubtitle = players[selectedPlayerId].subtitles.find(
-            (s) => time >= s.start && time <= s.end
-          );
-        }
-        // 2. Sous-titres par défaut de la vidéo
-        else if (videoConfig?.subtitles) {
-          const placeholder = videoConfig.subtitles.find(
-            (s) => time >= s.start && time <= s.end
-          );
-
-          if (placeholder) {
-            activeSubtitle = { text: placeholder.placeholder };
+          if (activeSubtitle) {
+            subtitleOverlay.textContent = activeSubtitle.text;
+            subtitleOverlay.style.display = "block";
+          } else {
+            subtitleOverlay.style.display = "none";
           }
         }
+      };
 
-        if (activeSubtitle) {
-          subtitleOverlay.textContent = activeSubtitle.text;
-          subtitleOverlay.style.display = "block";
-        } else {
-          subtitleOverlay.style.display = "none";
-        }
-      }
-
-      // Passe à la vidéo suivante
-      nextButton.addEventListener("click", () => {
-        socket.emit("nextVideo");
-      });
+      main();
     </script>
   </body>
 </html>
