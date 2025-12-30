@@ -154,33 +154,44 @@
           .join("");
       }
 
+      let lastAppliedVideoState = {
+        index: null,
+        playing: null,
+        time: null,
+      };
+
       function applyVideoState(videoState) {
-        // Changement de vidéo
-        if (currentVideoIndex !== videoState.index) {
-          currentVideoIndex = videoState.index;
-          applyingRemoteChange = true;
+        // 1. Changement de vidéo
+        if (lastAppliedVideoState.index !== videoState.index) {
+          lastAppliedVideoState.index = videoState.index;
+          lastAppliedVideoState.playing = null;
+          lastAppliedVideoState.time = null;
 
-          video.src = videoState.data.path; // adapte au champ exact
+          video.src = videoState.data.path;
           video.load();
-          return;
+          return; // IMPORTANT
         }
 
-        // Seek (avec tolérance)
-        const delta = Math.abs(video.currentTime - videoState.time);
-        if (delta > 0.3) {
-          applyingRemoteChange = true;
-          video.currentTime = videoState.time;
-        }
+        // 2. Play / Pause uniquement si changé
+        if (lastAppliedVideoState.playing !== videoState.playing) {
+          lastAppliedVideoState.playing = videoState.playing;
 
-        if (!localPlaying) {
           if (videoState.playing && video.paused) {
-            applyingRemoteChange = true;
-            video.play();
+            video.play().catch(() => {});
           }
+
           if (!videoState.playing && !video.paused) {
-            applyingRemoteChange = true;
             video.pause();
           }
+        }
+
+        // 3. Seek uniquement si réellement différent
+        if (
+          lastAppliedVideoState.time === null ||
+          Math.abs(video.currentTime - videoState.time) > 0.4
+        ) {
+          lastAppliedVideoState.time = videoState.time;
+          video.currentTime = videoState.time;
         }
       }
 
