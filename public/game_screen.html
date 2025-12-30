@@ -136,6 +136,15 @@
             return;
           }
 
+          // Si la vidéo a dépassé sa durée, force pause et set time = duration
+          if (videoState.time >= videoState.duration) {
+            applyingRemoteChange = true;
+            video.pause();
+            video.currentTime = videoState.duration;
+            applyingRemoteChange = false;
+            return; // stop further sync
+          }
+
           // Play / pause
           if (videoState.playing && video.paused) {
             applyingRemoteChange = true;
@@ -179,11 +188,19 @@
         // --- Timeupdate ---
         video.addEventListener("timeupdate", () => {
           if (applyingRemoteChange) return;
+
+          if (video.currentTime >= video.duration) {
+            video.pause();
+            video.currentTime = video.duration;
+            return;
+          }
+
           const now = Date.now();
           if (!video._lastTimeSent || now - video._lastTimeSent > 200) {
             video._lastTimeSent = now;
             socket.emit("videoTimeUpdate", video.currentTime);
           }
+
           applySubtitles();
         });
 
