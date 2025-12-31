@@ -126,6 +126,16 @@ input {
   background: #f5f5f5;
 }
 
+#remoteView button {
+  padding: 5px;
+  font-size: 16px;
+  background: #4caf50;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
 .playerItem {
   padding: 8px;
   margin: 5px 0;
@@ -158,6 +168,36 @@ input {
   align-items: center;
   gap: 8px;
 }
+
+@media (max-width: 480px) {
+  #subtitleForm button {
+    flex: 1 1 100%; /* Chaque bouton prend toute la largeur */
+  }
+}
+
+#subtitleForm {
+  display: flex;
+  flex-wrap: wrap; /* Permet aux boutons de passer à la ligne */
+  gap: 8px; /* Espace entre les boutons */
+  padding: 8px;
+  justify-content: flex-start;
+  align-items: center;
+}
+
+#subtitleForm .row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  width: 100%;
+}
+
+#subtitleForm button,
+#subtitleForm span,
+#subtitleForm input {
+  flex: 1 1 auto; /* Les éléments prennent la largeur nécessaire */
+  min-width: 80px; /* Empêche les boutons de devenir trop petits */
+}
+
 #playerName {
   font-size: 0.9rem;
   color: #333;

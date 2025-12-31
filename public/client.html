@@ -39,6 +39,7 @@
       <div class="row">
         <button id="submitButton" disabled>❌</button>
         <button id="toggleView" class="secondary">Salon</button>
+        <input id="saveNameInput" placeholder="Nom de la sauvegarde" />
         <button id="saveButton" class="secondary" disabled>Savegarder</button>
         <span id="playerName"></span>
       </div>
@@ -203,6 +204,8 @@
             if (newHeight === lastHeight) {
               // Ici tu peux scroll vers la subtitle active
               scrollToSub(currentSubtitleIndex, 400, false);
+            } else if (newHeight > lastHeight) {
+              showAllSubtitles();
             }
             lastHeight = newHeight;
           }, 50); // 50ms après le dernier resize, la hauteur est stabilisée
@@ -509,19 +512,31 @@
           video.pause();
         };
         /* ================= SAVE BUTTON ================= */
-        saveButton.onclick = () => {
-          if (!lastGameState) return;
+        let saveTriggered = false;
+
+        const saveSubtitles = () => {
+          if (saveTriggered) return; // empêche double trigger
+          saveTriggered = true;
+
+          const name = saveNameInput.value.trim();
+          if (!name || !lastGameState) {
+            saveTriggered = false;
+            return;
+          }
 
           const { selectedPlayerId, players, video } = lastGameState;
-          if (!selectedPlayerId || !players[selectedPlayerId]) return;
+          if (!selectedPlayerId || !players[selectedPlayerId]) {
+            saveTriggered = false;
+            return;
+          }
 
           const subtitles = players[selectedPlayerId].subtitles;
-          if (!subtitles || !subtitles.length) return;
+          if (!subtitles || !subtitles.length) {
+            saveTriggered = false;
+            return;
+          }
 
-          const name = prompt("Nom de la sauvegarde ?");
-          if (!name) return;
-
-          const key = savesKey(lastGameState.video.id);
+          const key = savesKey(video.id);
           const saves = JSON.parse(localStorage.getItem(key) || "[]");
 
           saves.push({
@@ -535,8 +550,14 @@
           renderSaves();
 
           saveButton.textContent = "✅ Saved";
-          setTimeout(() => (saveButton.textContent = "Save"), 1000);
+          setTimeout(() => {
+            saveButton.textContent = "Save";
+            saveTriggered = false;
+          }, 1000);
         };
+
+        // déclenchement unique pour click/touch
+        saveButton.addEventListener("click", saveSubtitles);
       }
 
       function fmt(sec) {
