@@ -26,20 +26,20 @@
 
     <!-- ================= REMOTE VIEW ================= -->
     <div id="remoteView" style="display: none">
-      <button id="playButton">Lecture</button>
-      <button id="pauseButton">Pause</button>
+      <button id="playButton">▶</button>
+      <button id="pauseButton">||</button>
       <input type="range" id="seekBar" min="0" max="100" value="0" />
-      <button id="previousButton">Vidéo précédente</button>
-      <button id="nextButton">Vidéo suivante</button>
       <select id="videoSelect" style="width: 100%; margin: 8px 0"></select>
       <div id="playersList"></div>
+      <div id="savesList" class="savesList"></div>
     </div>
 
     <!-- ================= FOOTER ================= -->
     <div id="subtitleForm">
       <div class="row">
-        <button id="submitButton" disabled>Poster</button>
-        <button id="toggleView" class="secondary">Télécommande</button>
+        <button id="submitButton" disabled>❌</button>
+        <button id="toggleView" class="secondary">Salon</button>
+        <button id="saveButton" class="secondary" disabled>Savegarder</button>
         <span id="playerName"></span>
       </div>
     </div>
@@ -58,17 +58,18 @@
 
         const submitButton = document.getElementById("submitButton");
         const toggleViewBtn = document.getElementById("toggleView");
+        const saveButton = document.getElementById("saveButton");
+        const playerNameSpan = document.getElementById("playerName");
+
         const playerView = document.getElementById("playerView");
         const remoteView = document.getElementById("remoteView");
 
         const playButton = document.getElementById("playButton");
         const pauseButton = document.getElementById("pauseButton");
         const seekBar = document.getElementById("seekBar");
-        const previousButton = document.getElementById("previousButton");
-        const nextButton = document.getElementById("nextButton");
         const videoSelect = document.getElementById("videoSelect");
         const playersList = document.getElementById("playersList");
-        const playerNameSpan = document.getElementById("playerName");
+        const savesList = document.getElementById("savesList");
 
         /* ================= STATE ================= */
         let videosById = {};
@@ -76,10 +77,19 @@
         let currentVideoId = null;
         let isEditingSubtitle = false;
         let isRemoteVisible = false;
-        let remoteDuration = 0;
         let applyingRemoteChange = false;
         let lastAppliedVideoState = { id: null, playing: null, time: null };
         let lastGameState = null;
+
+        function savesKey(videoId) {
+          return `savedSubs_${videoId}`;
+        }
+
+        function isMobile() {
+          return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+            navigator.userAgent
+          );
+        }
 
         /* ================= PLAYER NAME ================= */
         let playerName = localStorage.getItem("playerName");
@@ -134,6 +144,9 @@
             .map(
               (s, i) => `
             <div class="subtitleItem" id="sub-${i}">
+                <button class="seekButton" onclick="seekTo(${
+                  s.start
+                })">▶</button>
               <span class="subtitleTime">${fmt(s.start)} - ${fmt(s.end)}</span>
               <input class="subtitleInput"
                 value="${s.text}"
@@ -141,18 +154,110 @@
                 onfocus="focusSubtitle(${i})"
                 onblur="stopEditing()"
                 oninput="updateSubtitle(${i}, this.value)">
-              <button class="seekButton" onclick="seekTo(${s.start})">▶</button>
             </div>`
             )
             .join("");
         }
 
+        function renderSaves() {
+          const state = lastGameState;
+          if (!state?.video?.id) {
+            savesList.innerHTML = "";
+            return;
+          }
+
+          const key = savesKey(state.video.id);
+          const saves = JSON.parse(localStorage.getItem(key) || "[]");
+
+          if (!saves.length) {
+            savesList.innerHTML = "<em>Aucune sauvegarde pour cette vidéo</em>";
+            return;
+          }
+
+          savesList.innerHTML = saves
+            .map(
+              (s) => `
+      <div class="saveItem">
+        <span>${s.name}</span>
+        <div>
+          <button onclick="loadSave('${s.id}')">↻</button>
+          <button onclick="deleteSave('${s.id}')">🗑</button>
+        </div>
+      </div>
+    `
+            )
+            .join("");
+        }
+
+        let resizeTimeout;
+        let lastHeight = window.innerHeight;
+        let currentSubtitleIndex = null;
+
+        window.addEventListener("resize", () => {
+          const newHeight = window.innerHeight;
+
+          clearTimeout(resizeTimeout);
+
+          // On attend que la hauteur se stabilise
+          resizeTimeout = setTimeout(() => {
+            if (newHeight === lastHeight) {
+              // Ici tu peux scroll vers la subtitle active
+              scrollToSub(currentSubtitleIndex, 400, false);
+            }
+            lastHeight = newHeight;
+          }, 50); // 50ms après le dernier resize, la hauteur est stabilisée
+        });
+
+        window.loadSave = (saveId) => {
+          if (!lastGameState?.video?.id) return;
+
+          const key = savesKey(lastGameState.video.id);
+          const saves = JSON.parse(localStorage.getItem(key) || "[]");
+
+          const save = saves.find((s) => s.id === saveId);
+          if (!save) return;
+
+          // ⚠️ LOCAL UNIQUEMENT
+          playerSubtitles = structuredClone(save.subtitles);
+
+          // persistance locale
+          localStorage.setItem(
+            `subs_${lastGameState.video.id}`,
+            JSON.stringify(playerSubtitles)
+          );
+
+          // 🔁 réhydrater complètement l’UI
+          renderSubtitles();
+
+          submitButton.disabled = !playerSubtitles.every(
+            (s) => s.text && s.text.trim()
+          );
+
+          // forcer recalcul overlay / active subtitle / scroll
+          video.dispatchEvent(new Event("timeupdate"));
+        };
+
+        window.deleteSave = (id) => {
+          const { video, selectedPlayerId } = lastGameState;
+          const key = savesKey(video.id);
+          const saves = JSON.parse(localStorage.getItem(key) || "[]");
+
+          localStorage.setItem(
+            key,
+            JSON.stringify(saves.filter((s) => s.id !== id))
+          );
+
+          renderSaves();
+        };
+
         window.focusSubtitle = (i) => {
           isEditingSubtitle = true;
           video.pause();
           seekTo(playerSubtitles[i].start);
+
+          if (!isMobile()) return;
           hideOtherSubtitles(i);
-          scrollToSub(i);
+          currentSubtitleIndex = i;
         };
         window.stopEditing = () => {
           isEditingSubtitle = false;
@@ -168,14 +273,14 @@
             .querySelectorAll(".subtitleItem")
             .forEach((el) => (el.style.display = "flex"));
         }
-        function scrollToSub(i) {
-          setTimeout(
-            () =>
-              document
-                .getElementById(`sub-${i}`)
-                ?.scrollIntoView({ behavior: "smooth", block: "end" }),
-            200
-          );
+        function scrollToSub(i, duration = 0, smooth = true) {
+          const callback = () =>
+            document.getElementById(`sub-${i}`)?.scrollIntoView({
+              behavior: smooth ? "smooth" : "instant",
+              block: "end",
+            });
+          if (duration === 0) callback();
+          setTimeout(callback, duration);
         }
         window.updateSubtitle = (i, text) => {
           playerSubtitles[i].text = text;
@@ -194,24 +299,30 @@
           const active = playerSubtitles.find(
             (s) => t >= s.start && t <= s.end
           );
+
+          // Overlay local
           subtitlesList
             .querySelectorAll(".subtitleItem")
             .forEach((el, i) =>
               el.classList.toggle("active", playerSubtitles[i] === active)
             );
-          if (active && !isEditingSubtitle && !isRemoteVisible) {
+
+          if (active && !isRemoteVisible) {
             subtitleOverlayLocal.textContent =
               active.text || active.placeholder;
             subtitleOverlayLocal.style.display = "block";
-            scrollToSub(playerSubtitles.indexOf(active));
+            if (!isEditingSubtitle)
+              scrollToSub(playerSubtitles.indexOf(active));
           } else subtitleOverlayLocal.style.display = "none";
+
+          // Overlay remote
           if (isRemoteVisible) renderRemoteSubtitles();
         });
 
         submitButton.onclick = () => {
+          if (!playerSubtitles.every((s) => s.text.trim())) return;
           socket.emit("submitSubtitles", playerSubtitles);
-          submitButton.disabled = true;
-          submitButton.textContent = "Soumis ✅";
+          submitButton.textContent = "↻";
         };
 
         /* ================= REMOTE VIDEO ================= */
@@ -278,31 +389,78 @@
         }
 
         /* ================= SOCKET GAMESTATE ================= */
+
         socket.on("gameState", (state) => {
+          saveButton.disabled = !state?.selectedPlayerId;
+
           const videoCfg = videosById[state.video.id];
           if (!videoCfg) return;
-          remoteDuration = state.video.duration;
+
+          const remoteDuration = state.video.duration;
           lastGameState = state;
+
           if (currentVideoId !== state.video.id) {
             currentVideoId = state.video.id;
             loadLocalVideo(videoCfg);
+            renderSaves();
           }
-          applyRemoteVideoState(state.video, videoCfg);
+
+          // appliquer la remote video seulement si on est en remote view
+          if (isRemoteVisible) {
+            applyRemoteVideoState(state.video, videoCfg);
+            // update seekBar toujours selon gameState
+            seekBar.value =
+              remoteDuration > 0
+                ? (state.video.time / remoteDuration) * 100
+                : 0;
+          }
+
           seekBar.value =
             remoteDuration > 0 ? (state.video.time / remoteDuration) * 100 : 0;
           renderPlayers(state);
           renderVideoSelect(state.video.id);
         });
 
+        socket.on("gameState", (state) => {
+          if (!isRemoteVisible) return;
+          const videoState = state.video;
+
+          if (videoState.duration > 0) {
+            seekBar.value = (videoState.time / videoState.duration) * 100;
+          }
+
+          // Synchronisation vidéo
+          if (Math.abs(video.currentTime - videoState.time) > 1) {
+            applyingRemoteChange = true;
+            video.currentTime = videoState.time;
+            applyingRemoteChange = false;
+          }
+
+          if (videoState.playing && video.paused) video.play();
+          if (!videoState.playing && !video.paused) video.pause();
+        });
+
         /* ================= REMOTE CONTROLS ================= */
         playButton.onclick = () => socket.emit("remotePlay");
         pauseButton.onclick = () => socket.emit("remotePause");
-        previousButton.onclick = () => socket.emit("previousVideo");
-        nextButton.onclick = () => socket.emit("nextVideo");
+
+        let isSeeking = false;
+
         seekBar.oninput = () => {
-          if (remoteDuration > 0)
-            socket.emit("remoteSeek", (seekBar.value / 100) * remoteDuration);
+          if (lastGameState?.video.duration > 0) {
+            isSeeking = true;
+            socket.emit(
+              "remoteSeek",
+              (seekBar.value / 100) * lastGameState?.video.duration
+            );
+          }
         };
+
+        seekBar.onchange = () => {
+          // une fois que le slider est lâché
+          isSeeking = false;
+        };
+
         videoSelect.onchange = () => {
           if (videoSelect.value)
             socket.emit("selectVideoById", videoSelect.value);
@@ -345,12 +503,39 @@
             : "none";
           playerView.style.display = isRemoteVisible ? "none" : "block";
           remoteView.style.display = isRemoteVisible ? "block" : "none";
-          toggleViewBtn.textContent = isRemoteVisible
-            ? "Sous-titres"
-            : "Télécommande";
+          toggleViewBtn.textContent = isRemoteVisible ? "Editeur" : "Salon";
 
           video.controls = !isRemoteVisible;
           video.pause();
+        };
+        /* ================= SAVE BUTTON ================= */
+        saveButton.onclick = () => {
+          if (!lastGameState) return;
+
+          const { selectedPlayerId, players, video } = lastGameState;
+          if (!selectedPlayerId || !players[selectedPlayerId]) return;
+
+          const subtitles = players[selectedPlayerId].subtitles;
+          if (!subtitles || !subtitles.length) return;
+
+          const name = prompt("Nom de la sauvegarde ?");
+          if (!name) return;
+
+          const key = savesKey(lastGameState.video.id);
+          const saves = JSON.parse(localStorage.getItem(key) || "[]");
+
+          saves.push({
+            id: crypto.randomUUID(),
+            name,
+            date: Date.now(),
+            subtitles,
+          });
+
+          localStorage.setItem(key, JSON.stringify(saves));
+          renderSaves();
+
+          saveButton.textContent = "✅ Saved";
+          setTimeout(() => (saveButton.textContent = "Save"), 1000);
         };
       }
 

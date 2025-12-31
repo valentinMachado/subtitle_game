@@ -2,6 +2,20 @@ const express = require("express");
 const socketio = require("socket.io");
 const fs = require("fs");
 const crypto = require("crypto");
+const { exec } = require("child_process");
+
+function getVideoDuration(path) {
+  return new Promise((resolve, reject) => {
+    exec(
+      `ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "${path}"`,
+      (err, stdout) => {
+        if (err) return reject(err);
+        const duration = parseFloat(stdout);
+        resolve(duration);
+      }
+    );
+  });
+}
 
 const gameState = {
   video: {
@@ -30,14 +44,79 @@ function loadConfig() {
 let config = loadConfig();
 gameState.video.index = 0;
 gameState.video.id = config.videos[0]?.id ?? null;
+updateGameState();
+
+const mapUUIDCancelled = new Map();
+let currentVideoEndPromiseUUID = null;
+const createVideoEndPromise = () => {
+  const duration = gameState.video.duration;
+  const time = gameState.video.time;
+  const promiseDuration = duration * 1000 - time * 1000 + 500;
+
+  const uuid = crypto.randomUUID();
+
+  console.log(
+    "Création de la promesse de fin de vidéo:",
+    promiseDuration,
+    duration,
+    time,
+    uuid
+  );
+
+  const promise = new Promise((resolve) => {
+    setTimeout(() => {
+      resolve(uuid);
+      console.log("Promesse terminée");
+    }, promiseDuration);
+  });
+
+  mapUUIDCancelled.set(uuid, false);
+  currentVideoEndPromiseUUID = uuid;
+
+  promise.then((pUUID) => {
+    if (mapUUIDCancelled.get(pUUID)) {
+      console.log("Annulée", pUUID);
+      delete mapUUIDCancelled.get(pUUID);
+      return;
+    }
+    console.log("Non annulée", pUUID);
+
+    gameState.video.playing = false;
+
+    delete mapUUIDCancelled.get(pUUID);
+
+    io.emit("gameState", gameState);
+  });
+};
+
+const cancelVideoEndPromise = () => {
+  if (currentVideoEndPromiseUUID) {
+    console.log(
+      "Annulation de la promesse de fin de vidéo",
+      currentVideoEndPromiseUUID
+    );
+    mapUUIDCancelled.set(currentVideoEndPromiseUUID, true);
+    currentVideoEndPromiseUUID = null;
+  }
+};
 
 // ---------- GAME STATE RESET ----------
 
-function updateGameState() {
-  gameState.video.duration = 0;
+async function updateGameState() {
   gameState.video.time = 0;
   gameState.video.playing = false;
   gameState.selectedPlayerId = null;
+
+  // Récupération dynamique de la durée
+  try {
+    gameState.video.duration = await getVideoDuration(
+      `public/${config.videos[gameState.video.index]?.path}`
+    );
+    console.log("Durée vidéo:", gameState.video.duration);
+  } catch (e) {
+    console.error("Erreur récupération durée vidéo:", e);
+    gameState.video.duration = 0;
+  }
 
   Object.values(gameState.players).forEach((p) => {
     p.submitted = false;
@@ -78,26 +157,20 @@ io.on("connection", (socket) => {
 
   socket.on("remotePlay", () => {
     gameState.video.playing = true;
+    createVideoEndPromise();
     io.emit("gameState", gameState);
   });
 
   socket.on("remotePause", () => {
     gameState.video.playing = false;
+    cancelVideoEndPromise();
     io.emit("gameState", gameState);
   });
 
   socket.on("remoteSeek", (time) => {
     gameState.video.time = time;
-    io.emit("gameState", gameState);
-  });
-
-  socket.on("videoTimeUpdate", (time) => {
-    gameState.video.time = time;
-    io.emit("gameState", gameState);
-  });
-
-  socket.on("videoDurationUpdate", (duration) => {
-    gameState.video.duration = duration;
+    gameState.video.playing = false;
+    cancelVideoEndPromise();
     io.emit("gameState", gameState);
   });
 

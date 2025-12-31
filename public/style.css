@@ -48,6 +48,14 @@ video {
   object-fit: contain;
 }
 
+input {
+  padding: 14px;
+  font-size: 16px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  outline: none;
+}
+
 .subtitleOverlay {
   position: absolute;
   bottom: 12%;
