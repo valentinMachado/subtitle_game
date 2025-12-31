@@ -127,7 +127,7 @@ input {
 }
 
 #remoteView button {
-  padding: 5px;
+  padding: 10px;
   font-size: 16px;
   background: #4caf50;
   color: white;
@@ -195,7 +195,14 @@ input {
 #subtitleForm span,
 #subtitleForm input {
   flex: 1 1 auto; /* Les éléments prennent la largeur nécessaire */
-  min-width: 80px; /* Empêche les boutons de devenir trop petits */
+  min-width: 30px; /* Empêche les boutons de devenir trop petits */
+  padding: 8px;
+  font-size: 16px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  text-align: center;
+  user-select: none;
 }
 
 #playerName {

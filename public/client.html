@@ -40,8 +40,13 @@
       <div class="row">
         <button id="submitButton" disabled>❌</button>
         <button id="toggleView" class="secondary">Salon</button>
-        <input id="saveNameInput" placeholder="Nom de la sauvegarde" />
+        <input
+          id="saveNameInput"
+          placeholder="Nom de la sauvegarde"
+          value="Nom default"
+        />
         <button id="saveButton" class="secondary" disabled>Savegarder</button>
+        <button id="clearButton" class="secondary">🗑</button>
         <span id="playerName"></span>
       </div>
     </div>
@@ -61,6 +66,8 @@
         const submitButton = document.getElementById("submitButton");
         const toggleViewBtn = document.getElementById("toggleView");
         const saveButton = document.getElementById("saveButton");
+        const clearButton = document.getElementById("clearButton");
+
         const playerNameSpan = document.getElementById("playerName");
 
         const playerView = document.getElementById("playerView");
@@ -146,18 +153,20 @@
           subtitlesList.innerHTML = playerSubtitles
             .map(
               (s, i) => `
-            <div class="subtitleItem" id="sub-${i}">
-                <button class="seekButton" onclick="seekTo(${
-                  s.start
-                })">▶</button>
-              <span class="subtitleTime">${fmt(s.start)} - ${fmt(s.end)}</span>
-              <input class="subtitleInput"
-                value="${s.text}"
-                placeholder="${s.placeholder}"
-                onfocus="focusSubtitle(${i})"
-                onblur="stopEditing()"
-                oninput="updateSubtitle(${i}, this.value)">
-            </div>`
+              <div class="subtitleItem" id="sub-${i}">
+                  <button class="seekButton" onclick="seekTo(${
+                    s.start
+                  })">▶</button>
+                <span class="subtitleTime">${fmt(s.start)} - ${fmt(
+                s.end
+              )}</span>
+                <input class="subtitleInput"
+                  value="${s.text}"
+                  placeholder="${s.placeholder}"
+                  onfocus="focusSubtitle(${i})"
+                  onblur="stopEditing()"
+                  oninput="updateSubtitle(${i}, this.value)">
+              </div>`
             )
             .join("");
         }
@@ -170,7 +179,11 @@
           }
 
           const key = savesKey(state.video.id);
-          const saves = JSON.parse(localStorage.getItem(key) || "[]");
+          const cached = localStorage.getItem(key)
+            ? localStorage.getItem(key)
+            : null;
+
+          const saves = cached ? JSON.parse(cached) : [];
 
           if (!saves.length) {
             savesList.innerHTML = "<em>Aucune sauvegarde pour cette vidéo</em>";
@@ -180,14 +193,14 @@
           savesList.innerHTML = saves
             .map(
               (s) => `
-      <div class="saveItem">
-        <span>${s.name}</span>
-        <div>
-          <button onclick="loadSave('${s.id}')">↻</button>
-          <button onclick="deleteSave('${s.id}')">🗑</button>
+        <div class="saveItem">
+          <span>${s.name}</span>
+          <div>
+            <button onclick="loadSave('${s.id}')">↻</button>
+            <button onclick="deleteSave('${s.id}')">🗑</button>
+          </div>
         </div>
-      </div>
-    `
+      `
             )
             .join("");
         }
@@ -217,7 +230,11 @@
           if (!lastGameState?.video?.id) return;
 
           const key = savesKey(lastGameState.video.id);
-          const saves = JSON.parse(localStorage.getItem(key) || "[]");
+          const cached = localStorage.getItem(key)
+            ? localStorage.getItem(key)
+            : null;
+
+          const saves = cached ? JSON.parse(cached) : [];
 
           const save = saves.find((s) => s.id === saveId);
           if (!save) return;
@@ -521,46 +538,90 @@
           if (saveTriggered) return; // empêche double trigger
           saveTriggered = true;
 
-          const name = saveNameInput.value.trim();
-          if (!name || !lastGameState) {
-            saveTriggered = false;
-            return;
+          try {
+            const name = saveNameInput.value.trim();
+            if (!name || !lastGameState) {
+              saveButton.textContent = "❌ Nom invalide";
+              setTimeout(() => {
+                saveButton.textContent = "Save";
+                saveTriggered = false;
+              }, 1000);
+              return;
+            }
+
+            const { selectedPlayerId, players, video } = lastGameState;
+            if (!selectedPlayerId || !players[selectedPlayerId]) {
+              saveButton.textContent = "❌ Pas de joueur selectionné";
+              setTimeout(() => {
+                saveButton.textContent = "Save";
+                saveTriggered = false;
+              }, 1000);
+              return;
+            }
+
+            const subtitles = players[selectedPlayerId].subtitles;
+            if (!subtitles || !subtitles.length) {
+              saveButton.textContent = "❌ Pas de sous-titres";
+              setTimeout(() => {
+                saveButton.textContent = "Save";
+                saveTriggered = false;
+              }, 1000);
+              return;
+            }
+
+            const key = savesKey(video.id);
+
+            const cached = localStorage.getItem(key)
+              ? localStorage.getItem(key)
+              : null;
+
+            const saves = cached ? JSON.parse(cached) : [];
+
+            saves.push({
+              id: Date.now().toString(),
+              name,
+              date: Date.now(),
+              subtitles,
+            });
+
+            try {
+              localStorage.setItem(key, JSON.stringify(saves));
+            } catch (e) {
+              saveButton.textContent = "❌ Local storage full";
+              setTimeout(() => {
+                saveButton.textContent = "Save";
+                saveTriggered = false;
+              }, 1000);
+              return;
+            }
+
+            renderSaves();
+
+            saveButton.textContent = "✅ Saved";
+            setTimeout(() => {
+              saveButton.textContent = "Save";
+              saveTriggered = false;
+            }, 1000);
+          } catch (e) {
+            console.error(e);
+            saveButton.textContent = "❌ " + e.message;
+          } finally {
+            setTimeout(() => {
+              saveButton.textContent = "Save";
+              saveTriggered = false;
+            }, 1000);
           }
-
-          const { selectedPlayerId, players, video } = lastGameState;
-          if (!selectedPlayerId || !players[selectedPlayerId]) {
-            saveTriggered = false;
-            return;
-          }
-
-          const subtitles = players[selectedPlayerId].subtitles;
-          if (!subtitles || !subtitles.length) {
-            saveTriggered = false;
-            return;
-          }
-
-          const key = savesKey(video.id);
-          const saves = JSON.parse(localStorage.getItem(key) || "[]");
-
-          saves.push({
-            id: crypto.randomUUID(),
-            name,
-            date: Date.now(),
-            subtitles,
-          });
-
-          localStorage.setItem(key, JSON.stringify(saves));
-          renderSaves();
-
-          saveButton.textContent = "✅ Saved";
-          setTimeout(() => {
-            saveButton.textContent = "Save";
-            saveTriggered = false;
-          }, 1000);
         };
 
         // déclenchement unique pour click/touch
         saveButton.addEventListener("click", saveSubtitles);
+
+        /* ================= CLEAR BUTTON ================= */
+        clearButton.onclick = () => {
+          confirm("Effacer toutes les sauvegardes ?");
+          localStorage.clear();
+          window.location.reload();
+        };
       }
 
       function fmt(sec) {
