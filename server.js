@@ -82,6 +82,7 @@ const createVideoEndPromise = () => {
     console.log("Non annulée", pUUID);
 
     gameState.video.playing = false;
+    gameState.video.time = 0;
 
     delete mapUUIDCancelled.get(pUUID);
 
