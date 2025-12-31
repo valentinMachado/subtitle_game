@@ -348,11 +348,10 @@
         };
 
         /* ================= REMOTE VIDEO ================= */
-        function applyRemoteVideoState(videoState, videoCfg) {
+        async function applyRemoteVideoState(videoState, videoCfg) {
           if (lastAppliedVideoState.id !== videoState.id) {
             applyingRemoteChange = true;
             video.src = videoCfg.path;
-            video.load();
             applyingRemoteChange = false;
           }
           if (
@@ -412,7 +411,7 @@
 
         /* ================= SOCKET GAMESTATE ================= */
 
-        socket.on("gameState", (state) => {
+        socket.on("gameState", async (state) => {
           saveButton.disabled = !state?.selectedPlayerId;
 
           const videoCfg = videosById[state.video.id];
@@ -429,7 +428,7 @@
 
           // appliquer la remote video seulement si on est en remote view
           if (isRemoteVisible) {
-            applyRemoteVideoState(state.video, videoCfg);
+            await applyRemoteVideoState(state.video, videoCfg);
             // update seekBar toujours selon gameState
             seekBar.value =
               remoteDuration > 0
@@ -618,8 +617,8 @@
 
         /* ================= CLEAR BUTTON ================= */
         clearButton.onclick = () => {
-          if (!confirm("Effacer toutes les sauvegardes ?")) return;
-          localStorage.clear();
+          if (!confirm("Changez de nom ?")) return;
+          localStorage.setItem("playerName", "");
           window.location.reload();
         };
       }

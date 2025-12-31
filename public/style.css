@@ -75,7 +75,7 @@ input {
 #playerView {
   position: fixed;
   top: 38vh;
-  height: 38vh;
+  height: 47vh;
   left: 0;
   right: 0;
   overflow-y: auto;
@@ -117,7 +117,7 @@ input {
 #remoteView {
   position: fixed;
   top: 38vh;
-  height: 38vh;
+  height: 47vh;
   left: 0;
   right: 0;
   overflow-y: auto;
@@ -155,7 +155,9 @@ input {
 /* ===== FIXED BAR ===== */
 #subtitleForm {
   position: fixed;
-  bottom: env(safe-area-inset-bottom);
+  height: 15vh;
+  max-height: 15vh;
+  bottom: 0;
   left: 0;
   right: 0;
   background: white;
@@ -167,12 +169,6 @@ input {
   display: flex;
   align-items: center;
   gap: 8px;
-}
-
-@media (max-width: 480px) {
-  #subtitleForm button {
-    flex: 1 1 100%; /* Chaque bouton prend toute la largeur */
-  }
 }
 
 #subtitleForm {

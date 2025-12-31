@@ -189,7 +189,7 @@ const main = async () => {
         startTime: startTime,
         endTime: endTime,
         addBlackBox: true,
-        blackBoxHeight: blackBoxHeight || 300,
+        blackBoxHeight: blackBoxHeight || 150,
         blackBoxColor: "black@1",
       }
     );
@@ -201,7 +201,7 @@ const main = async () => {
   try {
     await addVideoToConfig(
       `./public/videos/${videoId}.mp4`,
-      "zh",
+      "en",
       `${videoId}`
     );
   } catch (err) {
