@@ -75,7 +75,7 @@ input {
 #playerView {
   position: fixed;
   top: 38vh;
-  bottom: 76px;
+  height: 38vh;
   left: 0;
   right: 0;
   overflow-y: auto;
@@ -117,7 +117,7 @@ input {
 #remoteView {
   position: fixed;
   top: 38vh;
-  bottom: 76px;
+  height: 38vh;
   left: 0;
   right: 0;
   overflow-y: auto;

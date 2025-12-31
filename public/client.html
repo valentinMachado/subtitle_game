@@ -39,13 +39,13 @@
     <div id="subtitleForm">
       <div class="row">
         <button id="submitButton" disabled>❌</button>
-        <button id="toggleView" class="secondary">Salon</button>
+        <button id="toggleView" class="secondary">👋</button>
         <input
           id="saveNameInput"
           placeholder="Nom de la sauvegarde"
-          value="Nom default"
+          value="Sauvegarde"
         />
-        <button id="saveButton" class="secondary" disabled>Savegarder</button>
+        <button id="saveButton" class="secondary" disabled>💾</button>
         <button id="clearButton" class="secondary">🗑</button>
         <span id="playerName"></span>
       </div>
@@ -526,7 +526,7 @@
             : "none";
           playerView.style.display = isRemoteVisible ? "none" : "block";
           remoteView.style.display = isRemoteVisible ? "block" : "none";
-          toggleViewBtn.textContent = isRemoteVisible ? "Editeur" : "Salon";
+          toggleViewBtn.textContent = isRemoteVisible ? "✍" : "👋";
 
           video.controls = !isRemoteVisible;
           video.pause();
@@ -543,7 +543,7 @@
             if (!name || !lastGameState) {
               saveButton.textContent = "❌ Nom invalide";
               setTimeout(() => {
-                saveButton.textContent = "Save";
+                saveButton.textContent = "💾";
                 saveTriggered = false;
               }, 1000);
               return;
@@ -553,7 +553,7 @@
             if (!selectedPlayerId || !players[selectedPlayerId]) {
               saveButton.textContent = "❌ Pas de joueur selectionné";
               setTimeout(() => {
-                saveButton.textContent = "Save";
+                saveButton.textContent = "💾";
                 saveTriggered = false;
               }, 1000);
               return;
@@ -563,7 +563,7 @@
             if (!subtitles || !subtitles.length) {
               saveButton.textContent = "❌ Pas de sous-titres";
               setTimeout(() => {
-                saveButton.textContent = "Save";
+                saveButton.textContent = "💾";
                 saveTriggered = false;
               }, 1000);
               return;
@@ -589,7 +589,7 @@
             } catch (e) {
               saveButton.textContent = "❌ Local storage full";
               setTimeout(() => {
-                saveButton.textContent = "Save";
+                saveButton.textContent = "💾";
                 saveTriggered = false;
               }, 1000);
               return;
@@ -597,9 +597,9 @@
 
             renderSaves();
 
-            saveButton.textContent = "✅ Saved";
+            saveButton.textContent = "✅ 💾";
             setTimeout(() => {
-              saveButton.textContent = "Save";
+              saveButton.textContent = "💾";
               saveTriggered = false;
             }, 1000);
           } catch (e) {
@@ -607,7 +607,7 @@
             saveButton.textContent = "❌ " + e.message;
           } finally {
             setTimeout(() => {
-              saveButton.textContent = "Save";
+              saveButton.textContent = "💾";
               saveTriggered = false;
             }, 1000);
           }
@@ -618,7 +618,7 @@
 
         /* ================= CLEAR BUTTON ================= */
         clearButton.onclick = () => {
-          confirm("Effacer toutes les sauvegardes ?");
+          if (!confirm("Effacer toutes les sauvegardes ?")) return;
           localStorage.clear();
           window.location.reload();
         };
