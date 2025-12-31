@@ -85,6 +85,8 @@ const createVideoEndPromise = () => {
 
     delete mapUUIDCancelled.get(pUUID);
 
+    currentVideoEndPromiseUUID = null;
+
     io.emit("gameState", gameState);
   });
 };
@@ -143,6 +145,7 @@ io.on("connection", (socket) => {
       gameState.players[playerId] = {
         name: playerName || "Joueur",
         submitted: false,
+        submitHasBeenPlayed: true, // wait submission of srt
         subtitles: [],
       };
 
@@ -153,37 +156,11 @@ io.on("connection", (socket) => {
     socket.broadcast.emit("gameState", gameState);
   });
 
-  // ----- Remote controls -----
-
-  socket.on("remotePlay", () => {
-    gameState.video.playing = true;
-    createVideoEndPromise();
-    io.emit("gameState", gameState);
-  });
-
-  socket.on("remotePause", () => {
-    gameState.video.playing = false;
-    cancelVideoEndPromise();
-    io.emit("gameState", gameState);
-  });
-
-  socket.on("remoteStop", () => {
-    gameState.video.playing = false;
-    gameState.video.time = 0;
-    cancelVideoEndPromise();
-    io.emit("gameState", gameState);
-  });
-
-  socket.on("remoteSeek", (time) => {
-    gameState.video.time = time;
-    gameState.video.playing = false;
-    cancelVideoEndPromise();
-    io.emit("gameState", gameState);
-  });
-
   // ----- Subtitles -----
 
   socket.on("submitSubtitles", (subtitles) => {
+    if (subtitles.filter((s) => s.text !== "").length === 0) return;
+    console.log(subtitles.filter((s) => s.text !== "").length);
     if (!socket.playerId) return;
 
     const player = gameState.players[socket.playerId];
@@ -191,6 +168,7 @@ io.on("connection", (socket) => {
 
     player.submitted = true;
     player.subtitles = subtitles;
+    player.submitHasBeenPlayed = false;
 
     io.emit("gameState", gameState);
   });
@@ -225,6 +203,18 @@ io.on("connection", (socket) => {
 
   socket.on("selectPlayer", (playerId) => {
     gameState.selectedPlayerId = playerId || null;
+    const player = gameState.players[playerId];
+    if (!player) {
+      console.error("Player not found");
+      return;
+    }
+
+    cancelVideoEndPromise();
+
+    player.submitHasBeenPlayed = true;
+    gameState.video.playing = true;
+    gameState.video.time = 0;
+    createVideoEndPromise();
     io.emit("gameState", gameState);
   });
 
@@ -259,4 +249,6 @@ fs.watch("public/config.json", () => {
   }
 
   updateGameState();
+
+  io.emit("reload");
 });
