@@ -1,15 +1,6 @@
 const { spawn } = require("child_process");
-
-/**
- * Convertit un timestamp "HH:MM:SS" ou "MM:SS" en secondes
- */
-function timeToSeconds(time) {
-  if (typeof time === "number") return time;
-  const parts = time.split(":").map(Number);
-  if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
-  if (parts.length === 2) return parts[0] * 60 + parts[1];
-  return Number(time);
-}
+const fs = require("fs");
+const path = require("path");
 
 async function processVideo(inputPath, outputPath, options = {}) {
   return new Promise((resolve, reject) => {
@@ -47,6 +38,8 @@ async function processVideo(inputPath, outputPath, options = {}) {
 
     const ff = spawn("ffmpeg", args);
 
+    ff.stdin.end();
+
     ff.stdout.on("data", (data) => process.stdout.write(data.toString()));
     ff.stderr.on("data", (data) => process.stderr.write(data.toString()));
 
@@ -57,17 +50,146 @@ async function processVideo(inputPath, outputPath, options = {}) {
   });
 }
 
-// Exemple d'utilisation
-(async () => {
+/**
+ * Transcrit rapidement une vidéo avec Whisper tiny pour obtenir uniquement les timestamps
+ */
+async function generateTimestamps(videoPath, lang, id) {
+  return new Promise((resolve, reject) => {
+    if (!fs.existsSync(videoPath))
+      return reject(new Error("Fichier vidéo non trouvé"));
+
+    // Création d'un fichier audio temporaire
+    const audioPath = videoPath.replace(path.extname(videoPath), ".wav");
+    console.log(`[1/3] Extraction audio...`);
+    const ffmpeg = spawn("ffmpeg", [
+      "-y",
+      "-i",
+      videoPath,
+      "-ar",
+      "16000",
+      audioPath,
+    ]);
+
+    ffmpeg.stderr.on("data", (data) =>
+      process.stdout.write(`[ffmpeg] ${data}`)
+    );
+    ffmpeg.on("close", (code) => {
+      if (code !== 0)
+        return reject(new Error(`FFmpeg exited with code ${code}`));
+
+      console.log(`[2/3] Génération des timestamps avec Whisper tiny...`);
+      // Whisper tiny, sortie JSON
+      const whisper = spawn(
+        "whisper",
+        [
+          audioPath,
+          "--model",
+          "tiny",
+          "--language",
+          lang,
+          "--output_format",
+          "json",
+          "--output_dir",
+          path.dirname(videoPath),
+        ],
+        {
+          env: { ...process.env, PYTHONIOENCODING: "utf-8" },
+        }
+      );
+
+      let output = "";
+      whisper.stdout.on("data", (data) => (output += data.toString("utf8")));
+      whisper.stderr.on("data", (data) =>
+        process.stdout.write(`[whisper] ${data.toString("utf8")}`)
+      );
+      whisper.on("close", (code2) => {
+        if (code2 !== 0)
+          return reject(new Error(`Whisper exited with code ${code2}`));
+
+        // Lecture du JSON généré par Whisper
+        const jsonPath = audioPath.replace(".wav", ".json");
+        if (!fs.existsSync(jsonPath))
+          return reject(new Error("Fichier JSON non généré"));
+
+        const raw = fs.readFileSync(jsonPath, "utf-8");
+        const whisperData = JSON.parse(raw);
+
+        // Construction des segments {start, end, placeholder}
+        const subtitles = whisperData.segments.map((seg, i) => ({
+          start: seg.start,
+          end: seg.end,
+          placeholder: `${i + 1} ...`,
+        }));
+
+        // Suppression des fichiers temporaires
+        fs.unlinkSync(audioPath);
+        fs.unlinkSync(jsonPath);
+
+        console.log(
+          `[3/3] Timestamps générés et fichiers temporaires supprimés.`
+        );
+
+        resolve({
+          id,
+          path: path.relative("./public", videoPath).replace(/\\/g, "/"),
+          subtitles,
+        });
+      });
+    });
+  });
+}
+
+/**
+ * Ajoute la vidéo dans ./public/config.json
+ */
+async function addVideoToConfig(videoPath, lang, id) {
+  const newVideo = await generateTimestamps(videoPath, lang, id);
+
+  const configPath = "./public/config.json";
+  let config = { videos: [] };
+
+  if (fs.existsSync(configPath)) {
+    const raw = fs.readFileSync(configPath, "utf-8");
+    config = JSON.parse(raw);
+  }
+
+  const existingIndex = config.videos.findIndex((v) => v.id === id);
+  if (existingIndex >= 0) {
+    config.videos[existingIndex] = newVideo;
+  } else {
+    config.videos.push(newVideo);
+  }
+
+  fs.writeFileSync(configPath, JSON.stringify(config, null, 2), "utf-8");
+  console.log(`✅ Video "${id}" ajoutée dans config.json`);
+}
+
+const main = async () => {
+  const videoId = process.argv[2];
+  let startTime = process.argv[3];
+  let endTime = process.argv[4];
+  const blackBoxHeight = process.argv[5];
+
+  if (!startTime) startTime = "00:00:00";
+
+  if (!videoId || !startTime) {
+    console.error(
+      "Usage : node cut_part.js <videoId> <startTime> [endTime] [blackBoxHeight]"
+    );
+    process.exit(1);
+  } else {
+    console.log(`[1/3] Traitement de la partie ${startTime} à ${endTime}...`);
+  }
+
   try {
     const output = await processVideo(
       "./public/videos/temp_video.mp4",
-      "./public/videos/spectacle.mp4",
+      `./public/videos/${videoId}.mp4`,
       {
-        startTime: "01:05:37",
-        endTime: "1:05:56",
+        startTime: startTime,
+        endTime: endTime,
         addBlackBox: true,
-        blackBoxHeight: 150,
+        blackBoxHeight: blackBoxHeight || 300,
         blackBoxColor: "black@1",
       }
     );
@@ -75,4 +197,16 @@ async function processVideo(inputPath, outputPath, options = {}) {
   } catch (err) {
     console.error("Erreur FFmpeg :", err);
   }
-})();
+
+  try {
+    await addVideoToConfig(
+      `./public/videos/${videoId}.mp4`,
+      "zh",
+      `${videoId}`
+    );
+  } catch (err) {
+    console.error("❌ Erreur :", err);
+  }
+};
+
+main();

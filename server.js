@@ -167,6 +167,13 @@ io.on("connection", (socket) => {
     io.emit("gameState", gameState);
   });
 
+  socket.on("remoteStop", () => {
+    gameState.video.playing = false;
+    gameState.video.time = 0;
+    cancelVideoEndPromise();
+    io.emit("gameState", gameState);
+  });
+
   socket.on("remoteSeek", (time) => {
     gameState.video.time = time;
     gameState.video.playing = false;
