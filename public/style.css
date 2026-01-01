@@ -42,6 +42,18 @@ button:disabled {
   z-index: 100;
 }
 
+/* ===== VERSION DESKTOP ===== */
+@media screen and (min-width: 1024px) {
+  #videoContainer {
+    height: 55vh; /* La vidéo prend plus de place sur desktop */
+  }
+
+  #playerView,
+  #remoteView {
+    top: 55vh !important; /* On décale le player/remote pour laisser la vidéo visible */
+  }
+}
+
 video {
   max-height: 100%;
   max-width: 100%;
@@ -75,11 +87,10 @@ input {
 #playerView {
   position: fixed;
   top: 38vh;
-  height: 47vh;
   left: 0;
   right: 0;
   overflow-y: auto;
-  padding: 8px;
+  padding: 0px;
   background: #f5f5f5;
 }
 
@@ -117,11 +128,10 @@ input {
 #remoteView {
   position: fixed;
   top: 38vh;
-  height: 47vh;
   left: 0;
   right: 0;
   overflow-y: auto;
-  padding: 16px;
+  padding: 0px;
   display: none;
   background: #f5f5f5;
 }
@@ -155,8 +165,6 @@ input {
 /* ===== FIXED BAR ===== */
 #subtitleForm {
   position: fixed;
-  height: 15vh;
-  max-height: 15vh;
   bottom: 0;
   left: 0;
   right: 0;

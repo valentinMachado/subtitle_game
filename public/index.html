@@ -35,15 +35,16 @@
     <div id="subtitleForm">
       <div class="row">
         <button id="submitButton">📬</button>
-        <button id="toggleView" class="secondary">👋</button>
+        <button id="toggleView">👋</button>
         <input
           id="saveNameInput"
           placeholder="Nom de la sauvegarde"
           value="Sauvegarde"
         />
-        <button id="saveButton" class="secondary" disabled>💾</button>
+        <button id="saveButton" disabled>💾</button>
+        <button id="downloadButton" disabled>⬇️</button>
         <span id="playerName"></span>
-        <button id="clearButton" class="secondary">↻</button>
+        <button id="clearButton">🔄</button>
       </div>
     </div>
 
@@ -54,14 +55,18 @@
         const subtitleOverlayLocal = document.getElementById(
           "subtitleOverlayLocal"
         );
+
+        const videoContainer = document.getElementById("videoContainer");
         const subtitleOverlayRemote = document.getElementById(
           "subtitleOverlayRemote"
         );
         const subtitlesList = document.getElementById("subtitlesList");
 
+        const subtitleForm = document.getElementById("subtitleForm");
         const submitButton = document.getElementById("submitButton");
         const toggleViewBtn = document.getElementById("toggleView");
         const saveButton = document.getElementById("saveButton");
+        const downloadButton = document.getElementById("downloadButton");
         const clearButton = document.getElementById("clearButton");
 
         const playerNameSpan = document.getElementById("playerName");
@@ -202,7 +207,7 @@
         <div class="saveItem">
           <span>${s.name}</span>
           <div>
-            <button onclick="loadSave('${s.id}')">↻</button>
+            <button onclick="loadSave('${s.id}')">🔄</button>
             <button onclick="deleteSave('${s.id}')">❌</button>
           </div>
         </div>
@@ -233,12 +238,44 @@
           } else subtitleOverlayLocal.style.display = "none";
         };
 
+        const updateHeight = () => {
+          const newHeight = window.innerHeight;
+
+          const videoHeight = videoContainer.getBoundingClientRect().height;
+          const subtitleFormHeight =
+            subtitleForm.getBoundingClientRect().height;
+          const viewHeight = newHeight - videoHeight - subtitleFormHeight;
+          playerView.style.height = `${viewHeight}px`;
+          remoteView.style.height = `${viewHeight}px`;
+        };
+
+        const toggleView = () => {
+          isRemoteVisible = !isRemoteVisible;
+          subtitleOverlayLocal.style.display = isRemoteVisible
+            ? "none"
+            : "block";
+          subtitleOverlayRemote.style.display = isRemoteVisible
+            ? "block"
+            : "none";
+          playerView.style.display = isRemoteVisible ? "none" : "block";
+          remoteView.style.display = isRemoteVisible ? "block" : "none";
+          toggleViewBtn.textContent = isRemoteVisible ? "✍" : "👋";
+
+          video.controls = !isRemoteVisible;
+          video.pause();
+          requestAnimationFrame(() => updateHeight());
+        };
+
         let resizeTimeout;
         let lastHeight = window.innerHeight;
         let currentSubtitleIndex = null;
 
+        requestAnimationFrame(() => updateHeight());
+
         window.addEventListener("resize", () => {
           const newHeight = window.innerHeight;
+
+          updateHeight();
 
           clearTimeout(resizeTimeout);
 
@@ -348,6 +385,7 @@
 
         submitButton.onclick = () => {
           submitSubtitles();
+          if (!isRemoteVisible) toggleView();
         };
 
         /* ================= REMOTE VIDEO ================= */
@@ -417,6 +455,7 @@
 
         socket.on("gameState", async (state) => {
           saveButton.disabled = !state?.selectedPlayerId;
+          downloadButton.disabled = !state?.selectedPlayerId;
 
           const videoCfg = videosById[state.video.id];
           if (!videoCfg) return;
@@ -487,21 +526,7 @@
         }
 
         /* ================= TOGGLE VIEW ================= */
-        toggleViewBtn.onclick = () => {
-          isRemoteVisible = !isRemoteVisible;
-          subtitleOverlayLocal.style.display = isRemoteVisible
-            ? "none"
-            : "block";
-          subtitleOverlayRemote.style.display = isRemoteVisible
-            ? "block"
-            : "none";
-          playerView.style.display = isRemoteVisible ? "none" : "block";
-          remoteView.style.display = isRemoteVisible ? "block" : "none";
-          toggleViewBtn.textContent = isRemoteVisible ? "✍" : "👋";
-
-          video.controls = !isRemoteVisible;
-          video.pause();
-        };
+        toggleViewBtn.onclick = toggleView;
         /* ================= SAVE BUTTON ================= */
         let saveTriggered = false;
 
@@ -586,6 +611,31 @@
 
         // déclenchement unique pour click/touch
         saveButton.addEventListener("click", saveSubtitles);
+
+        downloadButton.onclick = () => {
+          downloadButton.textContent = "⌛";
+          fetch("/render")
+            .then((r) => r.json())
+            .then((data) => {
+              if (data.url) {
+                // Créer un lien temporaire pour déclencher le téléchargement
+                const a = document.createElement("a");
+                a.href = data.url;
+                a.download = "video_with_subtitles.mp4"; // Tu peux personnaliser le nom du fichier ici
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(data.url);
+                downloadButton.textContent = "⬇️";
+              }
+            })
+            .catch((error) => {
+              console.error(
+                "Erreur lors de la récupération du fichier:",
+                error
+              );
+            });
+        };
 
         /* ================= CLEAR BUTTON ================= */
         clearButton.onclick = () => {

@@ -3,6 +3,8 @@ const socketio = require("socket.io");
 const fs = require("fs");
 const crypto = require("crypto");
 const { exec } = require("child_process");
+const path = require("path");
+const { spawn } = require("child_process");
 
 function getVideoDuration(path) {
   return new Promise((resolve, reject) => {
@@ -132,6 +134,115 @@ async function updateGameState() {
 // ---------- STATIC FILES ----------
 
 app.use(express.static("public"));
+
+// Fonction pour convertir des secondes en format SRT
+function secondsToSRTTime(seconds) {
+  const ms = Math.floor((seconds % 1) * 1000);
+  const total = Math.floor(seconds);
+  const s = total % 60;
+  const m = Math.floor((total / 60) % 60);
+  const h = Math.floor(total / 3600);
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(
+    s
+  ).padStart(2, "0")},${String(ms).padStart(3, "0")}`;
+}
+
+// Fonction pour convertir les sous-titres en format SRT
+function subtitlesToSRT(subtitles) {
+  return subtitles
+    .filter((s) => s.text && s.text.trim() !== "")
+    .map((s, i) => {
+      return `${i + 1}
+${secondsToSRTTime(s.start)} --> ${secondsToSRTTime(s.end)}
+${s.text}
+
+`;
+    })
+    .join("");
+}
+
+app.get("/render", async (req, res) => {
+  try {
+    const { video, selectedPlayerId, players } = gameState;
+    const player = players[selectedPlayerId];
+    if (!video.id || !player || !player.subtitles?.length) {
+      return res.status(400).json({ error: "INVALID_STATE" });
+    }
+
+    const videoConfig = config.videos[video.index];
+    const inputVideoPath = path
+      .resolve("public", videoConfig.path)
+      .replace(/\\/g, "/");
+    const outputDir = path.join("public", "downloads");
+    if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir, { recursive: true });
+
+    const renderId = crypto.randomUUID();
+    const srtPath = path.join(outputDir, `${renderId}.srt`).replace(/\\/g, "/");
+    const outputPath = path
+      .join(outputDir, `${renderId}.mp4`)
+      .replace(/\\/g, "/");
+
+    // Générer le fichier SRT
+    const srtContent = subtitlesToSRT(player.subtitles);
+    fs.writeFileSync(srtPath, srtContent, { encoding: "utf8" });
+
+    // Commande FFmpeg
+    const ffmpegArgs = [
+      "-i",
+      inputVideoPath,
+      "-vf",
+      `subtitles=${srtPath.replace(
+        /:/g,
+        "\\\\:"
+      )}:force_style='Fontsize=24,PrimaryColour=&HFFFFFF&'`,
+      "-c:a",
+      "copy",
+      "-y",
+      outputPath,
+    ];
+
+    console.log("Spawning FFmpeg with args:", ffmpegArgs.join(" "));
+
+    const ffmpegProcess = spawn("ffmpeg", ffmpegArgs, {
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+
+    ffmpegProcess.stderr.on("data", (data) => {
+      console.error(`FFmpeg stderr: ${data}`);
+    });
+
+    ffmpegProcess.on("close", (code) => {
+      if (code !== 0) {
+        console.error("FFmpeg exited with code", code);
+        return res.status(500).json({ error: "FFMPEG_FAILED" });
+      }
+
+      if (!fs.existsSync(outputPath)) {
+        return res.status(500).json({ error: "NO_OUTPUT" });
+      }
+
+      res.json({
+        success: true,
+        url: `/downloads/${renderId}.mp4`,
+      });
+
+      // Suppression asynchrone du fichier .srt
+      fs.unlink(srtPath, (err) => {
+        if (err) {
+          console.error(
+            `Erreur lors de la suppression du fichier ${srtPath}:`,
+            err
+          );
+        } else {
+          console.log(`Fichier ${srtPath} supprimé avec succès.`);
+        }
+      });
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "SERVER_ERROR" });
+  }
+});
 
 // ---------- SOCKETS ----------
 
