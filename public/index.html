@@ -51,7 +51,7 @@
           <input
             id="saveNameInput"
             placeholder="Nom de la sauvegarde"
-            value="clip"
+            value="sous-titres"
             style="display: none"
           />
           <button id="saveButton" disabled style="display: none">💾</button>
@@ -62,13 +62,31 @@
     <!-- ================= FOOTER ================= -->
     <div id="subtitleForm">
       <div class="row">
-        <button id="toggleView">👋</button>
-        <button id="submitButton">📋</button>
+        <div id="viewActionMenu" class="action-menu">
+          <button class="action-menu-toggle">👀</button>
+
+          <div class="action-menu-panel">
+            <button class="action-menu-item" data-action="playerView">
+              ✍
+            </button>
+            <button class="action-menu-item" data-action="remoteView">
+              👋
+            </button>
+            <button class="action-menu-item" data-action="sectionView">
+              🔬
+            </button>
+            <button class="action-menu-item" data-action="timelineView">
+              🕥
+            </button>
+          </div>
+        </div>
+
+        <button id="submitButton">📄</button>
         <span id="playerName"></span>
         <button id="clearButton">🔄</button>
         <button id="downloadButton" disabled>⬇📁</button>
         <div id="emoticonActionMenu" class="action-menu" style="display: none">
-          <button class="action-menu-toggle">▲</button>
+          <button class="action-menu-toggle">💬</button>
 
           <div class="action-menu-panel">
             <button class="action-menu-item" data-action="emoticon">⛔</button>
@@ -78,6 +96,7 @@
             <button class="action-menu-item" data-action="emoticon">😂</button>
             <button class="action-menu-item" data-action="emoticon">😁</button>
             <button class="action-menu-item" data-action="emoticon">👍</button>
+            <button class="action-menu-item" data-action="emoticon">🙂</button>
           </div>
         </div>
       </div>
@@ -99,7 +118,7 @@
 
         const subtitleForm = document.getElementById("subtitleForm");
         const submitButton = document.getElementById("submitButton");
-        const toggleViewBtn = document.getElementById("toggleView");
+
         const saveButton = document.getElementById("saveButton");
         const saveNameInput = document.getElementById("saveNameInput");
         const downloadButton = document.getElementById("downloadButton");
@@ -324,11 +343,15 @@
           remoteView.style.height = `${viewHeight}px`;
         };
 
-        const toggleView = () => {
-          isRemoteVisible = !isRemoteVisible;
+        const displayView = (id) => {
+          if (id === currentViewId) return;
 
-          currentViewId = isRemoteVisible ? "remoteView" : "playerView";
+          currentViewId = id;
           localStorage.setItem("currentViewId", currentViewId);
+          playerView.style.display = id === "playerView" ? "block" : "none";
+          remoteView.style.display = id === "remoteView" ? "block" : "none";
+
+          isRemoteVisible = id === "remoteView";
 
           subtitleOverlayLocal.style.display = isRemoteVisible
             ? "none"
@@ -336,17 +359,14 @@
           subtitleOverlayRemote.style.display = isRemoteVisible
             ? "block"
             : "none";
-          playerView.style.display = isRemoteVisible ? "none" : "block";
-          remoteView.style.display = isRemoteVisible ? "block" : "none";
-          toggleViewBtn.textContent = isRemoteVisible ? "✍" : "👋";
 
-          saveNameInput.style.display = isRemoteVisible ? "block" : "none";
-          saveButton.style.display = isRemoteVisible ? "block" : "none";
           downloadButton.style.display = isRemoteVisible ? "none" : "block";
+          downloadButton.disabled = downloadButtonDisable();
+
+          saveButton.style.display = !isRemoteVisible ? "none" : "block";
+          saveNameInput.style.display = !isRemoteVisible ? "none" : "block";
 
           emoticonActionMenu.style.display = isRemoteVisible ? "block" : "none";
-
-          downloadButton.disabled = downloadButtonDisable();
 
           video.controls = !isRemoteVisible;
           video.pause();
@@ -357,7 +377,7 @@
         };
 
         const cachedViewId = localStorage.getItem("currentViewId");
-        if (cachedViewId === "remoteView") toggleView();
+        if (cachedViewId) displayView(cachedViewId);
 
         let resizeTimeout;
         let lastHeight = window.innerHeight;
@@ -412,7 +432,7 @@
           // forcer recalcul overlay / active subtitle / scroll
           video.dispatchEvent(new Event("timeupdate"));
           if (isRemoteVisible) {
-            toggleView();
+            displayView("playerView");
           }
         };
 
@@ -483,11 +503,11 @@
         submitButton.onclick = () => {
           const success = submitSubtitles();
           if (success && !isRemoteVisible) {
-            toggleView();
+            displayView("remoteView");
           }
 
           submitButton.textContent = success ? "✅" : "❌";
-          setTimeout(() => (submitButton.textContent = "📋"), 1000);
+          setTimeout(() => (submitButton.textContent = "📄"), 1000);
         };
 
         /* ================= REMOTE VIDEO ================= */
@@ -642,10 +662,12 @@
               ([id, p]) =>
                 `<div class="playerItem ${p.submitted ? "submitted" : ""} ${
                   state.selectedPlayerId === id ? "selected" : ""
-                }" onclick="selectPlayer('${id}')"><span>${p.name}</span>
+                }" onclick="selectPlayer('${id}')"><span>🤖</span><span>${
+                  p.name
+                }</span>
                                   <span>${p.submitted ? "✅" : "❌"}</span>
                                   </span><span>${
-                                    p.submitHasBeenPlayed ? "" : "📋"
+                                    p.submitHasBeenPlayed ? "" : "📄"
                                   }</span>
                                     </div>`
             )
@@ -680,8 +702,6 @@
             });
         }
 
-        /* ================= TOGGLE VIEW ================= */
-        toggleViewBtn.onclick = toggleView;
         /* ================= SAVE BUTTON ================= */
         let saveTriggered = false;
 
@@ -822,6 +842,11 @@
                     text: btn.textContent,
                     name: playerName,
                   });
+                  break;
+                case "playerView":
+                case "remoteView":
+                case "sectionView":
+                  displayView(action);
                   break;
               }
             });
