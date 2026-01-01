@@ -443,16 +443,6 @@
             video.src = videoCfg.path;
             applyingRemoteChange = false;
           }
-          if (
-            videoState.duration > 0 &&
-            videoState.time >= videoState.duration
-          ) {
-            applyingRemoteChange = true;
-            video.pause();
-            video.currentTime = videoState.duration;
-            applyingRemoteChange = false;
-            return;
-          }
 
           if (videoState.playing && video.paused) {
             applyingRemoteChange = true;
@@ -503,36 +493,31 @@
         /* ================= SOCKET GAMESTATE ================= */
 
         socket.on("gameState", async (state) => {
-          saveButton.disabled =
-            !state?.selectedPlayerId ||
-            !state.players[state.selectedPlayerId]?.submitted;
-          downloadButton.disabled =
-            !state?.selectedPlayerId ||
-            !state.players[state.selectedPlayerId]?.submitted;
+          lastGameState = state;
 
           const videoCfg = videosById[state.video.id];
-          if (!videoCfg) return;
-
-          const remoteDuration = state.video.duration;
-          lastGameState = state;
 
           if (currentVideoId !== state.video.id) {
             currentVideoId = state.video.id;
             loadLocalVideo(state, videoCfg);
             renderSaves();
           }
-
-          // appliquer la remote video seulement si on est en remote view
-          if (isRemoteVisible) {
-            await applyRemoteVideoState(state.video, videoCfg);
-          }
-
-          renderPlayers(state);
-          renderVideoSelect(state.video.id);
         });
 
-        socket.on("gameState", (state) => {
+        socket.on("gameState", async (state) => {
           if (!isRemoteVisible) return;
+
+          const videoCfg = videosById[state.video.id];
+
+          saveButton.disabled =
+            !state?.selectedPlayerId ||
+            !state.players[state.selectedPlayerId]?.submitted;
+          downloadButton.disabled =
+            !state?.selectedPlayerId ||
+            !state.players[state.selectedPlayerId]?.submitted;
+          await applyRemoteVideoState(state.video, videoCfg);
+          renderPlayers(state);
+          renderVideoSelect(state.video.id);
           const videoState = state.video;
 
           // Synchronisation vidéo
@@ -680,7 +665,10 @@
         // déclenchement unique pour click/touch
         saveButton.addEventListener("click", saveSubtitles);
 
+        let flagDownload = false;
         downloadButton.onclick = () => {
+          if (flagDownload) return;
+          flagDownload = true;
           downloadButton.textContent = "⌛";
           fetch("/render")
             .then((r) => r.json())
@@ -692,6 +680,7 @@
                 a.setAttribute("target", "_blank");
                 a.click();
                 downloadButton.textContent = "⬇📁";
+                flagDownload = false;
               }
             })
             .catch((error) => {
