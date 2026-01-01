@@ -74,7 +74,7 @@ const loadVideoId = async (id) => {
 
   if (id == "tutoriel") {
     const tutorialPlayer = {
-      name: "Cliquez ici pour commencer",
+      name: "Continuez le tutoriel",
       submitted: true,
       submitHasBeenPlayed: false,
       subtitles: config.tutorial.subtitlesTutorialPlayer,
@@ -315,12 +315,9 @@ io.on("connection", (socket) => {
   // ----- Subtitles -----
 
   socket.on("emoticon", ({ name, text }) => {
-    console.log(name, text);
-    console.log(gameState.emoticons);
-
     if (gameState.emoticons[name]) return;
     gameState.emoticons[name] = text;
-    setTimeout(() => delete gameState.emoticons[name], 5000);
+    setTimeout(() => delete gameState.emoticons[name], 3000);
 
     io.emit("gameState", gameState);
   });
@@ -370,6 +367,7 @@ io.on("connection", (socket) => {
     cancelVideoEndPromise();
 
     player.submitHasBeenPlayed = true;
+    console.log(player.name, "selected");
     gameState.video.playing = true;
     gameState.video.time = 0;
     createVideoEndPromise();

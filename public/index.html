@@ -10,6 +10,7 @@
   <body>
     <!-- ================= VIDEO ================= -->
     <div id="videoContainer">
+      <div id="viewInfo">✍</div>
       <video id="video" controls playsinline></video>
       <div id="subtitleOverlayLocal" class="subtitleOverlay"></div>
       <div
@@ -66,25 +67,24 @@
           <button class="action-menu-toggle">👀</button>
 
           <div class="action-menu-panel">
-            <button class="action-menu-item" data-action="playerView">
-              ✍
-            </button>
-            <button class="action-menu-item" data-action="remoteView">
-              👋
+            <button class="action-menu-item" data-action="timelineView">
+              🕥
             </button>
             <button class="action-menu-item" data-action="sectionView">
               🔬
             </button>
-            <button class="action-menu-item" data-action="timelineView">
-              🕥
+            <button class="action-menu-item" data-action="remoteView">
+              🤝
+            </button>
+            <button class="action-menu-item" data-action="playerView">
+              ✍
             </button>
           </div>
         </div>
 
-        <button id="submitButton">📄</button>
         <span id="playerName"></span>
-        <button id="clearButton">🔄</button>
-        <button id="downloadButton" disabled>⬇📁</button>
+        <button id="submitButton">📄</button>
+        <button id="downloadButton" disabled>💾</button>
         <div id="emoticonActionMenu" class="action-menu" style="display: none">
           <button class="action-menu-toggle">💬</button>
 
@@ -105,6 +105,7 @@
     <script>
       async function main() {
         /* ================= DOM ================= */
+        const viewInfo = document.getElementById("viewInfo");
         const video = document.getElementById("video");
         const subtitleOverlayLocal = document.getElementById(
           "subtitleOverlayLocal"
@@ -122,7 +123,7 @@
         const saveButton = document.getElementById("saveButton");
         const saveNameInput = document.getElementById("saveNameInput");
         const downloadButton = document.getElementById("downloadButton");
-        const clearButton = document.getElementById("clearButton");
+
         const emoticonActionMenu =
           document.getElementById("emoticonActionMenu");
 
@@ -166,7 +167,7 @@
             ) || "Joueur";
           localStorage.setItem("playerName", playerName);
         }
-        playerNameSpan.textContent = playerName;
+        playerNameSpan.textContent = "🤖 " + playerName;
 
         /* ================= CONFIG ================= */
         const cfg = await fetch("/config.json").then((r) => r.json());
@@ -243,6 +244,10 @@
             }
           }
 
+          localStorage.setItem(
+            `subs_${currentVideoId}`,
+            JSON.stringify(playerSubtitles)
+          );
           cleanupOtherCaches(videoCfg.id);
           renderSubtitles();
           downloadButton.disabled = downloadButtonDisable();
@@ -291,7 +296,7 @@
           const saves = cached ? JSON.parse(cached) : [];
 
           if (!saves.length) {
-            savesList.innerHTML = "<em>Aucune sauvegarde pour cette vidéo</em>";
+            savesList.innerHTML = "<em>Aucun sous-titre pour ce clip</em>";
             return;
           }
 
@@ -347,6 +352,16 @@
           if (id === currentViewId) return;
 
           currentViewId = id;
+
+          viewInfo.textContent =
+            id === "playerView"
+              ? "✍"
+              : id === "remoteView"
+              ? "🤝"
+              : id === "timelineView"
+              ? "🕥"
+              : "🔬";
+
           localStorage.setItem("currentViewId", currentViewId);
           playerView.style.display = id === "playerView" ? "block" : "none";
           remoteView.style.display = id === "remoteView" ? "block" : "none";
@@ -600,7 +615,7 @@
                 emoticon.appendChild(textEl);
 
                 // random position on videoContainer
-                const videoRect = videoContainer.getBoundingClientRect();
+                const videoRect = video.getBoundingClientRect();
                 const x =
                   videoRect.width * 0.5 +
                   (Math.random() - 0.5) * 2 * videoRect.width * 0.3;
@@ -613,7 +628,7 @@
                 setTimeout(() => {
                   emoticon.remove();
                   currentEmoticons[name] = null;
-                }, 5000);
+                }, 3000);
               };
               createEmoticon();
             }
@@ -663,12 +678,12 @@
                 `<div class="playerItem ${p.submitted ? "submitted" : ""} ${
                   state.selectedPlayerId === id ? "selected" : ""
                 }" onclick="selectPlayer('${id}')"><span>🤖</span><span>${
-                  p.name
+                  p.submitted ? "📄" : "❌"
                 }</span>
-                                  <span>${p.submitted ? "✅" : "❌"}</span>
                                   </span><span>${
-                                    p.submitHasBeenPlayed ? "" : "📄"
-                                  }</span>
+                                    p.submitHasBeenPlayed ? "" : "👋"
+                                  }</span><span>${p.name}</span>
+
                                     </div>`
             )
             .join("");
@@ -676,16 +691,6 @@
         window.selectPlayer = (id) => socket.emit("selectPlayer", id);
         function renderVideoSelect(activeId) {
           videoSelect.innerHTML = "";
-          const langOptGroup = {};
-
-          Object.values(videosById).forEach((v) => {
-            if (langOptGroup[v.lang]) return;
-
-            const optgroup = document.createElement("optgroup");
-            optgroup.label = v.lang;
-            langOptGroup[v.lang] = optgroup;
-            videoSelect.appendChild(optgroup);
-          });
 
           Object.values(videosById)
             .sort((a, b) => a.id.toString().localeCompare(b.id.toString()))
@@ -698,7 +703,7 @@
                 option.selected = true;
               }
 
-              langOptGroup[v.lang].appendChild(option);
+              videoSelect.appendChild(option);
             });
         }
 
@@ -794,7 +799,7 @@
           a.href = url;
           a.setAttribute("target", "_blank");
           a.click();
-          downloadButton.textContent = "⬇📁";
+          downloadButton.textContent = "💾";
           flagDownload = false;
         });
         downloadButton.onclick = () => {
@@ -808,7 +813,7 @@
         };
 
         /* ================= CLEAR BUTTON ================= */
-        clearButton.onclick = () => {
+        playerNameSpan.onclick = () => {
           if (!confirm("Changez de nom ?")) return;
           localStorage.setItem("playerName", "");
           window.location.reload();
