@@ -263,6 +263,9 @@
 
           video.controls = !isRemoteVisible;
           video.pause();
+
+          if (isRemoteVisible) socket.emit("needGameState");
+
           requestAnimationFrame(() => updateHeight());
         };
 
@@ -455,7 +458,9 @@
 
         socket.on("gameState", async (state) => {
           saveButton.disabled = !state?.selectedPlayerId;
-          downloadButton.disabled = !state?.selectedPlayerId;
+          downloadButton.disabled =
+            !state?.selectedPlayerId ||
+            !state.players[state.selectedPlayerId]?.submitted;
 
           const videoCfg = videosById[state.video.id];
           if (!videoCfg) return;

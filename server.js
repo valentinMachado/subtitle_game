@@ -65,9 +65,22 @@ const createVideoEndPromise = () => {
     uuid
   );
 
+  const interval = setInterval(() => {
+    if (mapUUIDCancelled.get(uuid)) {
+      clearInterval(interval);
+      return;
+    }
+
+    gameState.video.time = Math.min(
+      gameState.video.duration,
+      gameState.video.time + 0.1
+    );
+  }, 100);
+
   const promise = new Promise((resolve) => {
     setTimeout(() => {
       resolve(uuid);
+      clearInterval(interval);
       console.log("Promesse terminée");
     }, promiseDuration);
   });
@@ -126,6 +139,7 @@ async function updateGameState() {
   Object.values(gameState.players).forEach((p) => {
     p.submitted = false;
     p.subtitles = [];
+    p.submitHasBeenPlayed = true;
   });
 
   io.emit("gameState", gameState);
@@ -268,6 +282,10 @@ io.on("connection", (socket) => {
     socket.broadcast.emit("gameState", gameState);
   });
 
+  socket.on("needGameState", () => {
+    socket.emit("gameState", gameState);
+  });
+
   // ----- Subtitles -----
 
   socket.on("submitSubtitles", (subtitles) => {
@@ -281,6 +299,7 @@ io.on("connection", (socket) => {
     player.submitted = true;
     player.subtitles = subtitles;
     player.submitHasBeenPlayed = false;
+    console.log(player.name, "submitted subtitles");
 
     io.emit("gameState", gameState);
   });
@@ -308,6 +327,7 @@ io.on("connection", (socket) => {
 
     gameState.video.index = index;
     gameState.video.id = videoId;
+
     updateGameState();
   });
 
