@@ -25,10 +25,38 @@
     </div>
 
     <!-- ================= REMOTE VIEW ================= -->
-    <div id="remoteView" style="display: none">
-      <select id="videoSelect" style="width: 100%; margin: 8px 0"></select>
-      <div id="playersList"></div>
-      <div id="savesList" class="savesList"></div>
+    <div id="remoteView" style="display: none; gap: 16px; max-width: 100vw">
+      <div style="display: flex; width: 100%; height: 100%">
+        <!-- Colonne gauche -->
+        <div style="flex: 1; display: flex; flex-direction: column; gap: 8px">
+          <select id="videoSelect" style="width: 100%"></select>
+          <div id="playersList"></div>
+        </div>
+
+        <!-- Colonne droite -->
+        <div
+          style="
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            min-width: 0;
+          "
+        >
+          <div
+            id="savesList"
+            class="savesList"
+            style="display: block; width: 100%; overflow-y: auto"
+          ></div>
+          <input
+            id="saveNameInput"
+            placeholder="Nom de la sauvegarde"
+            value="clip"
+            style="display: none"
+          />
+          <button id="saveButton" disabled style="display: none">💾</button>
+        </div>
+      </div>
     </div>
 
     <!-- ================= FOOTER ================= -->
@@ -38,14 +66,20 @@
         <button id="submitButton">📋</button>
         <span id="playerName"></span>
         <button id="clearButton">🔄</button>
-        <input
-          style="display: none"
-          id="saveNameInput"
-          placeholder="Nom de la sauvegarde"
-          value="clip"
-        />
         <button id="downloadButton" disabled>⬇📁</button>
-        <button id="saveButton" style="display: none" disabled>💾</button>
+        <div id="emoticonActionMenu" class="action-menu" style="display: none">
+          <button class="action-menu-toggle">▲</button>
+
+          <div class="action-menu-panel">
+            <button class="action-menu-item" data-action="emoticon">⛔</button>
+            <button class="action-menu-item" data-action="emoticon">❓</button>
+            <button class="action-menu-item" data-action="emoticon">🙃</button>
+            <button class="action-menu-item" data-action="emoticon">😅</button>
+            <button class="action-menu-item" data-action="emoticon">😂</button>
+            <button class="action-menu-item" data-action="emoticon">😁</button>
+            <button class="action-menu-item" data-action="emoticon">👍</button>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -70,6 +104,8 @@
         const saveNameInput = document.getElementById("saveNameInput");
         const downloadButton = document.getElementById("downloadButton");
         const clearButton = document.getElementById("clearButton");
+        const emoticonActionMenu =
+          document.getElementById("emoticonActionMenu");
 
         const playerNameSpan = document.getElementById("playerName");
 
@@ -82,6 +118,7 @@
 
         /* ================= STATE ================= */
         let videosById = {};
+        let currentViewId = "playerView";
         let playerSubtitles = [];
         let currentVideoId = null;
         let isEditingSubtitle = false;
@@ -152,12 +189,7 @@
         };
 
         const downloadButtonDisable = () => {
-          if (!lastGameState) return true;
-          return isRemoteVisible
-            ? !lastGameState?.selectedPlayerId ||
-                !lastGameState.players[lastGameState.selectedPlayerId]
-                  ?.submitted
-            : !playerSubtitles.every((s) => s.text && s.text !== "");
+          return !playerSubtitles.every((s) => s.text && s.text !== "");
         };
 
         /* ================= LOCAL VIDEO ================= */
@@ -294,6 +326,10 @@
 
         const toggleView = () => {
           isRemoteVisible = !isRemoteVisible;
+
+          currentViewId = isRemoteVisible ? "remoteView" : "playerView";
+          localStorage.setItem("currentViewId", currentViewId);
+
           subtitleOverlayLocal.style.display = isRemoteVisible
             ? "none"
             : "block";
@@ -306,6 +342,9 @@
 
           saveNameInput.style.display = isRemoteVisible ? "block" : "none";
           saveButton.style.display = isRemoteVisible ? "block" : "none";
+          downloadButton.style.display = isRemoteVisible ? "none" : "block";
+
+          emoticonActionMenu.style.display = isRemoteVisible ? "block" : "none";
 
           downloadButton.disabled = downloadButtonDisable();
 
@@ -316,6 +355,9 @@
 
           requestAnimationFrame(() => updateHeight());
         };
+
+        const cachedViewId = localStorage.getItem("currentViewId");
+        if (cachedViewId === "remoteView") toggleView();
 
         let resizeTimeout;
         let lastHeight = window.innerHeight;
@@ -503,7 +545,7 @@
         }
 
         /* ================= SOCKET GAMESTATE ================= */
-
+        let currentEmoticons = {};
         socket.on("gameState", async (state) => {
           lastGameState = state;
 
@@ -514,23 +556,49 @@
             loadLocalVideo(state, videoCfg);
             renderSaves();
           }
-        });
 
-        const playerState = () => {
-          if (!lastGameState) return null;
-
-          const players = Object.values(lastGameState.players);
-          for (let i = 0; i < players.length; i++) {
-            if (players[i].name == playerName) return players[i];
-          }
-
-          return null;
-        };
-
-        socket.on("gameState", async (state) => {
           if (!isRemoteVisible) return;
 
-          const videoCfg = videosById[state.video.id];
+          let newEmoticons = {};
+          Object.entries(state.emoticons).forEach(([name, text]) => {
+            newEmoticons[name] = text;
+            if (currentEmoticons[name]) {
+              // already poped
+              return;
+            } else {
+              currentEmoticons[name] = text;
+              const createEmoticon = () => {
+                const emoticon = document.createElement("div");
+                emoticon.className = "emoticon";
+                const nameEl = document.createElement("div");
+                nameEl.className = "emoticonName";
+                nameEl.textContent = name;
+                emoticon.appendChild(nameEl);
+                const textEl = document.createElement("div");
+                textEl.className = "emoticonText";
+                textEl.textContent = text;
+                emoticon.appendChild(textEl);
+
+                // random position on videoContainer
+                const videoRect = videoContainer.getBoundingClientRect();
+                const x =
+                  videoRect.width * 0.5 +
+                  (Math.random() - 0.5) * 2 * videoRect.width * 0.3;
+                const y =
+                  -Math.random() * videoRect.height * 0.5 + videoRect.bottom;
+                emoticon.style.left = `${x}px`;
+                emoticon.style.top = `${y}px`;
+
+                document.body.appendChild(emoticon);
+                setTimeout(() => {
+                  emoticon.remove();
+                  currentEmoticons[name] = null;
+                }, 5000);
+              };
+              createEmoticon();
+            }
+          });
+          currentEmoticons = newEmoticons;
 
           saveButton.disabled =
             !state?.selectedPlayerId ||
@@ -551,6 +619,17 @@
           if (videoState.playing && video.paused) video.play();
           if (!videoState.playing && !video.paused) video.pause();
         });
+
+        const playerState = () => {
+          if (!lastGameState) return null;
+
+          const players = Object.values(lastGameState.players);
+          for (let i = 0; i < players.length; i++) {
+            if (players[i].name == playerName) return players[i];
+          }
+
+          return null;
+        };
 
         videoSelect.onchange = () => {
           if (videoSelect.value)
@@ -714,6 +793,47 @@
           localStorage.setItem("playerName", "");
           window.location.reload();
         };
+
+        /* ================= ACTION MENU ================= */
+        document.querySelectorAll(".action-menu").forEach((menu) => {
+          const toggle = menu.querySelector(".action-menu-toggle");
+          const items = menu.querySelectorAll(".action-menu-item");
+
+          toggle.addEventListener("click", (e) => {
+            e.stopPropagation();
+
+            // fermer les autres menus
+            document
+              .querySelectorAll(".action-menu.open")
+              .forEach((m) => m !== menu && m.classList.remove("open"));
+
+            menu.classList.toggle("open");
+          });
+
+          items.forEach((btn) => {
+            btn.addEventListener("click", () => {
+              menu.classList.remove("open");
+
+              const action = btn.dataset.action;
+
+              switch (action) {
+                case "emoticon":
+                  socket.emit("emoticon", {
+                    text: btn.textContent,
+                    name: playerName,
+                  });
+                  break;
+              }
+            });
+          });
+        });
+
+        // clic global → fermeture
+        document.addEventListener("click", () => {
+          document
+            .querySelectorAll(".action-menu.open")
+            .forEach((m) => m.classList.remove("open"));
+        });
       }
 
       function fmt(sec) {

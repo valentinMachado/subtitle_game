@@ -153,6 +153,14 @@ video {
   background: #ffeb3b;
 }
 
+.saveItem {
+  display: inline-block;
+  margin: 2px;
+  padding: 2px 4px;
+  border: 1px solid #333;
+  border-radius: 4px;
+}
+
 /* ===== FOOTER ===== */
 #subtitleForm {
   position: fixed;
@@ -249,4 +257,67 @@ button:disabled {
   cursor: not-allowed;
   box-shadow: none;
   transform: none;
+}
+
+/* ===== ACTION MENU ===== */
+
+.action-menu {
+  position: relative;
+}
+
+.action-menu-toggle {
+  font-size: 24px;
+}
+
+.action-menu-panel {
+  position: absolute;
+  bottom: 60px;
+  right: 0;
+  display: none;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.action-menu.open .action-menu-panel {
+  display: flex;
+}
+
+.action-menu-item {
+  padding: 8px;
+  font-size: 18px;
+}
+
+/* ===== EMOTICON ===== */
+.emoticon {
+  padding: 2px 4px;
+  border-radius: 2%;
+  display: flex;
+  position: absolute;
+  z-index: 1000;
+  font-size: xx-large;
+
+  align-items: center;
+  justify-content: center;
+  padding: 2px 4px;
+
+  /* Animation */
+  animation: floatUp 5s ease-out forwards;
+}
+
+.emoticon .emoticonName {
+  font-size: 20px;
+  background-color: black;
+  color: white;
+}
+
+/* Déplacement vers le haut + disparition progressive */
+@keyframes floatUp {
+  0% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-80px);
+    opacity: 0;
+  }
 }

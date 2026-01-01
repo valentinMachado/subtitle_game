@@ -28,6 +28,7 @@ const gameState = {
     playing: false,
   },
   players: {},
+  emoticons: {},
 };
 
 const app = express();
@@ -312,6 +313,17 @@ io.on("connection", (socket) => {
   socket.on("render", (data) => render(data, socket));
 
   // ----- Subtitles -----
+
+  socket.on("emoticon", ({ name, text }) => {
+    console.log(name, text);
+    console.log(gameState.emoticons);
+
+    if (gameState.emoticons[name]) return;
+    gameState.emoticons[name] = text;
+    setTimeout(() => delete gameState.emoticons[name], 5000);
+
+    io.emit("gameState", gameState);
+  });
 
   socket.on("submitSubtitles", (subtitles) => {
     if (subtitles.filter((s) => s.text !== "").length === 0) return;
