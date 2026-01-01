@@ -34,8 +34,8 @@
     <!-- ================= FOOTER ================= -->
     <div id="subtitleForm">
       <div class="row">
-        <button id="submitButton">📬</button>
         <button id="toggleView">👋</button>
+        <button id="submitButton">📬</button>
         <input
           id="saveNameInput"
           placeholder="Nom de la sauvegarde"
@@ -130,6 +130,12 @@
         remoteView.style.display = "none";
 
         const submitSubtitles = () => {
+          if (
+            playerSubtitles.length === 0 ||
+            playerSubtitles.every((s) => s.text === "")
+          )
+            return false;
+
           socket.emit(
             "submitSubtitles",
             playerSubtitles.map((s) => ({
@@ -139,6 +145,8 @@
               placeholder: s.placeholder,
             }))
           );
+
+          return true;
         };
 
         /* ================= LOCAL VIDEO ================= */
@@ -387,8 +395,13 @@
         });
 
         submitButton.onclick = () => {
-          submitSubtitles();
-          if (!isRemoteVisible) toggleView();
+          const success = submitSubtitles();
+          if (success && !isRemoteVisible) {
+            toggleView();
+          }
+
+          submitButton.textContent = success ? "✅ 📬" : "❌ 📬";
+          setTimeout(() => (submitButton.textContent = "📬"), 1000);
         };
 
         /* ================= REMOTE VIDEO ================= */
@@ -511,8 +524,10 @@
                   state.selectedPlayerId === id ? "selected" : ""
                 }" onclick="selectPlayer('${id}')"><span>${
                   p.name
-                }</span><span>${p.submitHasBeenPlayed ? "" : "📬"}</span>
-                </span><span>${p.submitted ? "✅" : "❌"}</span></div>`
+                }</span><span>${p.submitted ? "✅" : "❌"}</span></span><span>${
+                  p.submitHasBeenPlayed ? "" : "📬"
+                }</span>
+                  </div>`
             )
             .join("");
         }
