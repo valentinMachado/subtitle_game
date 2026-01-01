@@ -2,7 +2,7 @@
 <html lang="fr">
   <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Client – Sous-titres / Télécommande</title>
+    <title>client</title>
     <script src="/socket.io/socket.io.js"></script>
     <link rel="stylesheet" href="./style.css" />
   </head>
@@ -44,8 +44,8 @@
           placeholder="Nom de la sauvegarde"
           value="clip"
         />
+        <button id="downloadButton" disabled>⬇📁</button>
         <button id="saveButton" style="display: none" disabled>💾</button>
-        <button id="downloadButton" style="display: none" disabled>⬇📁</button>
       </div>
     </div>
 
@@ -151,6 +151,15 @@
           return true;
         };
 
+        const downloadButtonDisable = () => {
+          if (!lastGameState) return true;
+          return isRemoteVisible
+            ? !lastGameState?.selectedPlayerId ||
+                !lastGameState.players[lastGameState.selectedPlayerId]
+                  ?.submitted
+            : !playerSubtitles.every((s) => s.text && s.text !== "");
+        };
+
         /* ================= LOCAL VIDEO ================= */
         function loadLocalVideo(state, videoCfg) {
           video.src = videoCfg.path;
@@ -185,6 +194,7 @@
 
           cleanupOtherCaches(videoCfg.id);
           renderSubtitles();
+          downloadButton.disabled = downloadButtonDisable();
         }
 
         function cleanupOtherCaches(id) {
@@ -197,20 +207,20 @@
           subtitlesList.innerHTML = playerSubtitles
             .map(
               (s, i) => `
-                    <div class="subtitleItem" id="sub-${i}">
-                        <button class="seekButton" onclick="seekTo(${
-                          s.start
-                        })">▶</button>
-                      <span class="subtitleTime">${fmt(s.start)} - ${fmt(
-                s.end
-              )}</span>
-                      <input class="subtitleInput"
-                        value="${s.text ? s.text : ""}"
-                        placeholder="${s.placeholder}"
-                        onfocus="focusSubtitle(${i})"
-                        onblur="stopEditing()"
-                        oninput="updateSubtitle(${i}, this.value)">
-                    </div>`
+                                <div class="subtitleItem" id="sub-${i}">
+                                    <button class="seekButton" onclick="seekTo(${
+                                      s.start
+                                    })">▶</button>
+                                  <span class="subtitleTime">${fmt(
+                                    s.start
+                                  )} - ${fmt(s.end)}</span>
+                                  <input class="subtitleInput"
+                                    value="${s.text ? s.text : ""}"
+                                    placeholder="${s.placeholder}"
+                                    onfocus="focusSubtitle(${i})"
+                                    onblur="stopEditing()"
+                                    oninput="updateSubtitle(${i}, this.value)">
+                                </div>`
             )
             .join("");
         }
@@ -237,14 +247,14 @@
           savesList.innerHTML = saves
             .map(
               (s) => `
-              <div class="saveItem">
-                <span>${s.name}</span>
-                <div>
-                  <button onclick="loadSave('${s.id}')">✍</button>
-                  <button onclick="deleteSave('${s.id}')">❌</button>
-                </div>
-              </div>
-            `
+                          <div class="saveItem">
+                            <span>${s.name}</span>
+                            <div>
+                              <button onclick="loadSave('${s.id}')">✍</button>
+                              <button onclick="deleteSave('${s.id}')">❌</button>
+                            </div>
+                          </div>
+                        `
             )
             .join("");
         }
@@ -296,7 +306,8 @@
 
           saveNameInput.style.display = isRemoteVisible ? "block" : "none";
           saveButton.style.display = isRemoteVisible ? "block" : "none";
-          downloadButton.style.display = isRemoteVisible ? "block" : "none";
+
+          downloadButton.disabled = downloadButtonDisable();
 
           video.controls = !isRemoteVisible;
           video.pause();
@@ -388,6 +399,7 @@
         window.stopEditing = () => {
           isEditingSubtitle = false;
           showAllSubtitles();
+          downloadButton.disabled = downloadButtonDisable();
         };
         function hideOtherSubtitles(i) {
           document
@@ -504,6 +516,17 @@
           }
         });
 
+        const playerState = () => {
+          if (!lastGameState) return null;
+
+          const players = Object.values(lastGameState.players);
+          for (let i = 0; i < players.length; i++) {
+            if (players[i].name == playerName) return players[i];
+          }
+
+          return null;
+        };
+
         socket.on("gameState", async (state) => {
           if (!isRemoteVisible) return;
 
@@ -512,9 +535,7 @@
           saveButton.disabled =
             !state?.selectedPlayerId ||
             !state.players[state.selectedPlayerId]?.submitted;
-          downloadButton.disabled =
-            !state?.selectedPlayerId ||
-            !state.players[state.selectedPlayerId]?.submitted;
+          downloadButton.disabled = downloadButtonDisable();
           await applyRemoteVideoState(state.video, videoCfg);
           renderPlayers(state);
           renderVideoSelect(state.video.id);
@@ -543,9 +564,11 @@
                 `<div class="playerItem ${p.submitted ? "submitted" : ""} ${
                   state.selectedPlayerId === id ? "selected" : ""
                 }" onclick="selectPlayer('${id}')"><span>${p.name}</span>
-                      <span>${p.submitted ? "✅" : "❌"}</span>
-                      </span><span>${p.submitHasBeenPlayed ? "" : "📋"}</span>
-                        </div>`
+                                  <span>${p.submitted ? "✅" : "❌"}</span>
+                                  </span><span>${
+                                    p.submitHasBeenPlayed ? "" : "📋"
+                                  }</span>
+                                    </div>`
             )
             .join("");
         }
@@ -666,29 +689,23 @@
         saveButton.addEventListener("click", saveSubtitles);
 
         let flagDownload = false;
+        socket.on("render_done", ({ url }) => {
+          // Créer un lien temporaire pour déclencher le téléchargement
+          const a = document.createElement("a");
+          a.href = url;
+          a.setAttribute("target", "_blank");
+          a.click();
+          downloadButton.textContent = "⬇📁";
+          flagDownload = false;
+        });
         downloadButton.onclick = () => {
           if (flagDownload) return;
           flagDownload = true;
           downloadButton.textContent = "⌛";
-          fetch("/render")
-            .then((r) => r.json())
-            .then((data) => {
-              if (data.url) {
-                // Créer un lien temporaire pour déclencher le téléchargement
-                const a = document.createElement("a");
-                a.href = data.url;
-                a.setAttribute("target", "_blank");
-                a.click();
-                downloadButton.textContent = "⬇📁";
-                flagDownload = false;
-              }
-            })
-            .catch((error) => {
-              console.error(
-                "Erreur lors de la récupération du fichier:",
-                error
-              );
-            });
+          socket.emit("render", {
+            isRemoteVisible,
+            playerSubtitles,
+          });
         };
 
         /* ================= CLEAR BUTTON ================= */
