@@ -35,16 +35,17 @@
     <div id="subtitleForm">
       <div class="row">
         <button id="toggleView">👋</button>
-        <button id="submitButton">📬</button>
-        <input
-          id="saveNameInput"
-          placeholder="Nom de la sauvegarde"
-          value="Sauvegarde"
-        />
-        <button id="saveButton" disabled>💾</button>
-        <button id="downloadButton" disabled>⬇️</button>
+        <button id="submitButton">📋</button>
         <span id="playerName"></span>
         <button id="clearButton">🔄</button>
+        <input
+          style="display: none"
+          id="saveNameInput"
+          placeholder="Nom de la sauvegarde"
+          value="clip"
+        />
+        <button id="saveButton" style="display: none" disabled>💾</button>
+        <button id="downloadButton" style="display: none" disabled>⬇📁</button>
       </div>
     </div>
 
@@ -66,6 +67,7 @@
         const submitButton = document.getElementById("submitButton");
         const toggleViewBtn = document.getElementById("toggleView");
         const saveButton = document.getElementById("saveButton");
+        const saveNameInput = document.getElementById("saveNameInput");
         const downloadButton = document.getElementById("downloadButton");
         const clearButton = document.getElementById("clearButton");
 
@@ -132,7 +134,7 @@
         const submitSubtitles = () => {
           if (
             playerSubtitles.length === 0 ||
-            playerSubtitles.every((s) => s.text === "")
+            playerSubtitles.every((s) => !s.text || s.text === "")
           )
             return false;
 
@@ -150,16 +152,39 @@
         };
 
         /* ================= LOCAL VIDEO ================= */
-        function loadLocalVideo(videoCfg) {
+        function loadLocalVideo(state, videoCfg) {
           video.src = videoCfg.path;
           video.load();
           const cached = localStorage.getItem(`subs_${videoCfg.id}`);
-          playerSubtitles = cached
-            ? JSON.parse(cached)
-            : videoCfg.subtitles.map((s) => ({ ...s, text: "" }));
+
+          playerSubtitles = null;
+
+          if (cached) {
+            const subtitlesCached = JSON.parse(cached);
+            playerSubtitles = videoCfg.subtitles.map((s, index) => {
+              return {
+                ...s,
+                text: subtitlesCached[index] ? subtitlesCached[index].text : "",
+              };
+            });
+          } else {
+            for (let key in state.players) {
+              if (playerName === state.players[key].name) {
+                playerSubtitles = state.players[key].subtitles;
+                break;
+              }
+            }
+
+            if (!playerSubtitles) {
+              playerSubtitles = videoCfg.subtitles.map((s) => ({
+                ...s,
+                text: "",
+              }));
+            }
+          }
+
           cleanupOtherCaches(videoCfg.id);
           renderSubtitles();
-          submitSubtitles();
         }
 
         function cleanupOtherCaches(id) {
@@ -172,20 +197,20 @@
           subtitlesList.innerHTML = playerSubtitles
             .map(
               (s, i) => `
-              <div class="subtitleItem" id="sub-${i}">
-                  <button class="seekButton" onclick="seekTo(${
-                    s.start
-                  })">▶</button>
-                <span class="subtitleTime">${fmt(s.start)} - ${fmt(
+                    <div class="subtitleItem" id="sub-${i}">
+                        <button class="seekButton" onclick="seekTo(${
+                          s.start
+                        })">▶</button>
+                      <span class="subtitleTime">${fmt(s.start)} - ${fmt(
                 s.end
               )}</span>
-                <input class="subtitleInput"
-                  value="${s.text}"
-                  placeholder="${s.placeholder}"
-                  onfocus="focusSubtitle(${i})"
-                  onblur="stopEditing()"
-                  oninput="updateSubtitle(${i}, this.value)">
-              </div>`
+                      <input class="subtitleInput"
+                        value="${s.text ? s.text : ""}"
+                        placeholder="${s.placeholder}"
+                        onfocus="focusSubtitle(${i})"
+                        onblur="stopEditing()"
+                        oninput="updateSubtitle(${i}, this.value)">
+                    </div>`
             )
             .join("");
         }
@@ -212,14 +237,14 @@
           savesList.innerHTML = saves
             .map(
               (s) => `
-        <div class="saveItem">
-          <span>${s.name}</span>
-          <div>
-            <button onclick="loadSave('${s.id}')">🔄</button>
-            <button onclick="deleteSave('${s.id}')">❌</button>
-          </div>
-        </div>
-      `
+              <div class="saveItem">
+                <span>${s.name}</span>
+                <div>
+                  <button onclick="loadSave('${s.id}')">✍</button>
+                  <button onclick="deleteSave('${s.id}')">❌</button>
+                </div>
+              </div>
+            `
             )
             .join("");
         }
@@ -268,6 +293,10 @@
           playerView.style.display = isRemoteVisible ? "none" : "block";
           remoteView.style.display = isRemoteVisible ? "block" : "none";
           toggleViewBtn.textContent = isRemoteVisible ? "✍" : "👋";
+
+          saveNameInput.style.display = isRemoteVisible ? "block" : "none";
+          saveButton.style.display = isRemoteVisible ? "block" : "none";
+          downloadButton.style.display = isRemoteVisible ? "block" : "none";
 
           video.controls = !isRemoteVisible;
           video.pause();
@@ -329,6 +358,9 @@
 
           // forcer recalcul overlay / active subtitle / scroll
           video.dispatchEvent(new Event("timeupdate"));
+          if (isRemoteVisible) {
+            toggleView();
+          }
         };
 
         window.deleteSave = (id) => {
@@ -360,7 +392,7 @@
         function hideOtherSubtitles(i) {
           document
             .querySelectorAll(".subtitleItem")
-            .forEach((el, j) => (el.style.display = j === i ? "flex" : "none"));
+            .forEach((el, j) => (el.style.display = j >= i ? "flex" : "none"));
         }
         function showAllSubtitles() {
           document
@@ -400,8 +432,8 @@
             toggleView();
           }
 
-          submitButton.textContent = success ? "✅ 📬" : "❌ 📬";
-          setTimeout(() => (submitButton.textContent = "📬"), 1000);
+          submitButton.textContent = success ? "✅" : "❌";
+          setTimeout(() => (submitButton.textContent = "📋"), 1000);
         };
 
         /* ================= REMOTE VIDEO ================= */
@@ -461,8 +493,9 @@
             if (placeholder) activeSub = { text: placeholder.placeholder };
           }
           if (activeSub) {
-            subtitleOverlayRemote.textContent =
-              activeSub.text != "" ? activeSub.text : activeSub.placeholder;
+            subtitleOverlayRemote.textContent = activeSub.text
+              ? activeSub.text
+              : activeSub.placeholder;
             subtitleOverlayRemote.style.display = "block";
           } else subtitleOverlayRemote.style.display = "none";
         }
@@ -470,7 +503,9 @@
         /* ================= SOCKET GAMESTATE ================= */
 
         socket.on("gameState", async (state) => {
-          saveButton.disabled = !state?.selectedPlayerId;
+          saveButton.disabled =
+            !state?.selectedPlayerId ||
+            !state.players[state.selectedPlayerId]?.submitted;
           downloadButton.disabled =
             !state?.selectedPlayerId ||
             !state.players[state.selectedPlayerId]?.submitted;
@@ -483,7 +518,7 @@
 
           if (currentVideoId !== state.video.id) {
             currentVideoId = state.video.id;
-            loadLocalVideo(videoCfg);
+            loadLocalVideo(state, videoCfg);
             renderSaves();
           }
 
@@ -522,27 +557,40 @@
               ([id, p]) =>
                 `<div class="playerItem ${p.submitted ? "submitted" : ""} ${
                   state.selectedPlayerId === id ? "selected" : ""
-                }" onclick="selectPlayer('${id}')"><span>${
-                  p.name
-                }</span><span>${p.submitted ? "✅" : "❌"}</span></span><span>${
-                  p.submitHasBeenPlayed ? "" : "📬"
-                }</span>
-                  </div>`
+                }" onclick="selectPlayer('${id}')"><span>${p.name}</span>
+                      <span>${p.submitted ? "✅" : "❌"}</span>
+                      </span><span>${p.submitHasBeenPlayed ? "" : "📋"}</span>
+                        </div>`
             )
             .join("");
         }
         window.selectPlayer = (id) => socket.emit("selectPlayer", id);
         function renderVideoSelect(activeId) {
-          videoSelect.innerHTML =
-            `<option value="">Sélectionner une vidéo</option>` +
-            Object.values(videosById)
-              .map(
-                (v) =>
-                  `<option value="${v.id}" ${
-                    v.id === activeId ? "selected" : ""
-                  }>${v.title || v.id}</option>`
-              )
-              .join("");
+          videoSelect.innerHTML = "";
+          const langOptGroup = {};
+
+          Object.values(videosById).forEach((v) => {
+            if (langOptGroup[v.lang]) return;
+
+            const optgroup = document.createElement("optgroup");
+            optgroup.label = v.lang;
+            langOptGroup[v.lang] = optgroup;
+            videoSelect.appendChild(optgroup);
+          });
+
+          Object.values(videosById)
+            .sort((a, b) => a.id.toString().localeCompare(b.id.toString()))
+            .forEach((v) => {
+              const option = document.createElement("option");
+              option.value = v.id;
+              option.textContent = `${v.id} (${v.lang})`;
+
+              if (v.id === activeId) {
+                option.selected = true;
+              }
+
+              langOptGroup[v.lang].appendChild(option);
+            });
         }
 
         /* ================= TOGGLE VIEW ================= */
@@ -567,7 +615,7 @@
 
             const { selectedPlayerId, players, video } = lastGameState;
             if (!selectedPlayerId || !players[selectedPlayerId]) {
-              saveButton.textContent = "❌ Pas de joueur selectionné";
+              saveButton.textContent = "❌";
               setTimeout(() => {
                 saveButton.textContent = "💾";
                 saveTriggered = false;
@@ -577,7 +625,7 @@
 
             const subtitles = players[selectedPlayerId].subtitles;
             if (!subtitles || !subtitles.length) {
-              saveButton.textContent = "❌ Pas de sous-titres";
+              saveButton.textContent = "❌";
               setTimeout(() => {
                 saveButton.textContent = "💾";
                 saveTriggered = false;
@@ -603,7 +651,7 @@
             try {
               localStorage.setItem(key, JSON.stringify(saves));
             } catch (e) {
-              saveButton.textContent = "❌ Local storage full";
+              saveButton.textContent = "❌";
               setTimeout(() => {
                 saveButton.textContent = "💾";
                 saveTriggered = false;
@@ -613,7 +661,7 @@
 
             renderSaves();
 
-            saveButton.textContent = "✅ 💾";
+            saveButton.textContent = "✅";
             setTimeout(() => {
               saveButton.textContent = "💾";
               saveTriggered = false;
@@ -641,12 +689,9 @@
                 // Créer un lien temporaire pour déclencher le téléchargement
                 const a = document.createElement("a");
                 a.href = data.url;
-                a.download = "video_with_subtitles.mp4"; // Tu peux personnaliser le nom du fichier ici
-                document.body.appendChild(a);
+                a.setAttribute("target", "_blank");
                 a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(data.url);
-                downloadButton.textContent = "⬇️";
+                downloadButton.textContent = "⬇📁";
               }
             })
             .catch((error) => {

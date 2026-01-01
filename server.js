@@ -28,7 +28,6 @@ const gameState = {
     playing: false,
   },
   players: {},
-  selectedPlayerId: null,
 };
 
 const app = express();
@@ -43,17 +42,60 @@ function loadConfig() {
   return JSON.parse(fs.readFileSync("public/config.json"));
 }
 
+const loadVideoId = async (id) => {
+  const index = config.videos.findIndex((v) => v.id === id);
+  gameState.video.index = index;
+  gameState.video.id = config.videos[gameState.video.index].id;
+  gameState.video.time = 0;
+  gameState.video.playing = false;
+
+  // Récupération dynamique de la durée
+  try {
+    gameState.video.duration = await getVideoDuration(
+      `public/${config.videos[gameState.video.index]?.path}`
+    );
+    console.log("Durée vidéo:", gameState.video.duration);
+  } catch (e) {
+    console.error("Erreur récupération durée vidéo:", e);
+    gameState.video.duration = 0;
+  }
+
+  Object.values(gameState.players).forEach((p) => {
+    p.submitted = false;
+    p.submitHasBeenPlayed = true;
+
+    if (id === "tutoriel") {
+      p.subtitles = config.tutorial.subtitlesPlayer;
+    } else {
+      p.subtitles = config.videos[gameState.video.index].subtitles;
+    }
+  });
+
+  if (id == "tutoriel") {
+    const tutorialPlayer = {
+      name: "Cliquez ici pour commencer",
+      submitted: true,
+      submitHasBeenPlayed: false,
+      subtitles: config.tutorial.subtitlesTutorialPlayer,
+    };
+    gameState.players.tutorialPlayer = tutorialPlayer;
+    gameState.selectedPlayerId = "tutorialPlayer";
+  } else {
+    delete gameState.players.tutorialPlayer;
+  }
+
+  io.emit("gameState", gameState);
+};
+
 let config = loadConfig();
-gameState.video.index = 0;
-gameState.video.id = config.videos[0]?.id ?? null;
-updateGameState();
+loadVideoId("tutoriel");
 
 const mapUUIDCancelled = new Map();
 let currentVideoEndPromiseUUID = null;
 const createVideoEndPromise = () => {
   const duration = gameState.video.duration;
   const time = gameState.video.time;
-  const promiseDuration = duration * 1000 - time * 1000 + 2000;
+  const promiseDuration = duration * 1000 - time * 1000 + 5000;
 
   const uuid = crypto.randomUUID();
 
@@ -97,7 +139,6 @@ const createVideoEndPromise = () => {
     console.log("Non annulée", pUUID);
 
     gameState.video.playing = false;
-    gameState.video.time = 0;
 
     delete mapUUIDCancelled.get(pUUID);
 
@@ -117,33 +158,6 @@ const cancelVideoEndPromise = () => {
     currentVideoEndPromiseUUID = null;
   }
 };
-
-// ---------- GAME STATE RESET ----------
-
-async function updateGameState() {
-  gameState.video.time = 0;
-  gameState.video.playing = false;
-  gameState.selectedPlayerId = null;
-
-  // Récupération dynamique de la durée
-  try {
-    gameState.video.duration = await getVideoDuration(
-      `public/${config.videos[gameState.video.index]?.path}`
-    );
-    console.log("Durée vidéo:", gameState.video.duration);
-  } catch (e) {
-    console.error("Erreur récupération durée vidéo:", e);
-    gameState.video.duration = 0;
-  }
-
-  Object.values(gameState.players).forEach((p) => {
-    p.submitted = false;
-    p.subtitles = [];
-    p.submitHasBeenPlayed = true;
-  });
-
-  io.emit("gameState", gameState);
-}
 
 // ---------- STATIC FILES ----------
 
@@ -187,10 +201,10 @@ app.get("/render", async (req, res) => {
     const inputVideoPath = path
       .resolve("public", videoConfig.path)
       .replace(/\\/g, "/");
-    const outputDir = path.join("public", "downloads");
+    const outputDir = path.join("public", "downloads/created");
     if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir, { recursive: true });
 
-    const renderId = crypto.randomUUID();
+    const renderId = Date.now().toString();
     const srtPath = path.join(outputDir, `${renderId}.srt`).replace(/\\/g, "/");
     const outputPath = path
       .join(outputDir, `${renderId}.mp4`)
@@ -237,7 +251,7 @@ app.get("/render", async (req, res) => {
 
       res.json({
         success: true,
-        url: `/downloads/${renderId}.mp4`,
+        url: `/downloads/created/${renderId}.mp4`,
       });
 
       // Suppression asynchrone du fichier .srt
@@ -272,7 +286,10 @@ io.on("connection", (socket) => {
         name: playerName || "Joueur",
         submitted: false,
         submitHasBeenPlayed: true, // wait submission of srt
-        subtitles: [],
+        subtitles:
+          gameState.video.id === "tutoriel"
+            ? config.tutorial.subtitlesPlayer
+            : config.videos[gameState.video.index].subtitles,
       };
 
       console.log(playerName, " connected");
@@ -307,28 +324,17 @@ io.on("connection", (socket) => {
   // ----- Video navigation -----
 
   socket.on("nextVideo", () => {
-    gameState.video.index = (gameState.video.index + 1) % config.videos.length;
-
-    gameState.video.id = config.videos[gameState.video.index].id;
-    updateGameState();
+    loadVideoId((gameState.video.index + 1) % config.videos.length);
   });
 
   socket.on("previousVideo", () => {
-    gameState.video.index =
-      (gameState.video.index - 1 + config.videos.length) % config.videos.length;
-
-    gameState.video.id = config.videos[gameState.video.index].id;
-    updateGameState();
+    loadVideoId(
+      (gameState.video.index - 1 + config.videos.length) % config.videos.length
+    );
   });
 
   socket.on("selectVideoById", (videoId) => {
-    const index = config.videos.findIndex((v) => v.id === videoId);
-    if (index === -1) return;
-
-    gameState.video.index = index;
-    gameState.video.id = videoId;
-
-    updateGameState();
+    loadVideoId(videoId);
   });
 
   // ----- Player selection -----
@@ -369,18 +375,13 @@ io.on("connection", (socket) => {
 // ---------- CONFIG HOT RELOAD ----------
 
 fs.watch("public/config.json", () => {
-  config = loadConfig();
+  try {
+    config = loadConfig();
 
-  const index = config.videos.findIndex((v) => v.id === gameState.video.id);
+    loadVideoId(gameState.video.id);
 
-  if (index === -1) {
-    gameState.video.index = 0;
-    gameState.video.id = config.videos[0]?.id ?? null;
-  } else {
-    gameState.video.index = index;
+    io.emit("reload");
+  } catch (e) {
+    console.error(e);
   }
-
-  updateGameState();
-
-  io.emit("reload");
 });

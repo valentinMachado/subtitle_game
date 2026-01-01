@@ -62,13 +62,14 @@ video {
 
 .subtitleOverlay {
   position: absolute;
-  bottom: 12%;
+  bottom: 1%;
   left: 6%;
   right: 6%;
   text-align: center;
   color: white;
   font-size: 20px;
-  background: rgba(0, 0, 0, 0.65);
+  font-size: x-large;
+  background: rgba(0, 0, 0, 0.3);
   padding: 10px 14px;
   border-radius: 8px;
   pointer-events: none;
@@ -118,7 +119,7 @@ video {
 .seekButton {
   width: 30px;
   font-size: 0.75rem;
-  padding: 2px 4px;
+  padding: 5px 8px;
 }
 
 /* ===== REMOTE VIEW ===== */

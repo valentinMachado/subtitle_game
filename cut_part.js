@@ -2,6 +2,9 @@ const { spawn } = require("child_process");
 const fs = require("fs");
 const path = require("path");
 
+const videoId = process.argv[2];
+const lang = process.argv[3];
+
 async function processVideo(inputPath, outputPath, options = {}) {
   return new Promise((resolve, reject) => {
     const {
@@ -53,7 +56,7 @@ async function processVideo(inputPath, outputPath, options = {}) {
 /**
  * Transcrit rapidement une vidéo avec Whisper tiny pour obtenir uniquement les timestamps
  */
-async function generateTimestamps(videoPath, lang, id) {
+async function generateTimestamps(videoPath) {
   return new Promise((resolve, reject) => {
     if (!fs.existsSync(videoPath))
       return reject(new Error("Fichier vidéo non trouvé"));
@@ -130,7 +133,8 @@ async function generateTimestamps(videoPath, lang, id) {
         );
 
         resolve({
-          id,
+          id: videoId,
+          lang: lang,
           path: path.relative("./public", videoPath).replace(/\\/g, "/"),
           subtitles,
         });
@@ -142,8 +146,8 @@ async function generateTimestamps(videoPath, lang, id) {
 /**
  * Ajoute la vidéo dans ./public/config.json
  */
-async function addVideoToConfig(videoPath, lang, id) {
-  const newVideo = await generateTimestamps(videoPath, lang, id);
+async function addVideoToConfig(videoPath) {
+  const newVideo = await generateTimestamps(videoPath);
 
   const configPath = "./public/config.json";
   let config = { videos: [] };
@@ -153,7 +157,7 @@ async function addVideoToConfig(videoPath, lang, id) {
     config = JSON.parse(raw);
   }
 
-  const existingIndex = config.videos.findIndex((v) => v.id === id);
+  const existingIndex = config.videos.findIndex((v) => videoId === v.id);
   if (existingIndex >= 0) {
     config.videos[existingIndex] = newVideo;
   } else {
@@ -161,35 +165,35 @@ async function addVideoToConfig(videoPath, lang, id) {
   }
 
   fs.writeFileSync(configPath, JSON.stringify(config, null, 2), "utf-8");
-  console.log(`✅ Video "${id}" ajoutée dans config.json`);
+  console.log(`✅ "${videoId}" ajoutée dans config.json`);
 }
 
 const main = async () => {
-  const videoId = process.argv[2];
-  let startTime = process.argv[3];
-  let endTime = process.argv[4];
-  const blackBoxHeight = process.argv[5];
+  let startTime = process.argv[4];
+  let endTime = process.argv[5];
 
   if (!startTime) startTime = "00:00:00";
 
-  if (!videoId || !startTime) {
+  if (!videoId || !lang) {
     console.error(
-      "Usage : node cut_part.js <videoId> <startTime> [endTime] [blackBoxHeight]"
+      "Usage : node cut_part.js <videoId> <lang> [startTime] [endTime] [blackBoxHeight]"
     );
     process.exit(1);
   } else {
-    console.log(`[1/3] Traitement de la partie ${startTime} à ${endTime}...`);
+    console.log(
+      `[1/3] Traitement de la partie ${videoId} ${startTime} à ${endTime}...`
+    );
   }
 
   try {
     const output = await processVideo(
-      "./public/videos/temp_video.mp4",
+      "./public/downloads/frosty.mp4",
       `./public/videos/${videoId}.mp4`,
       {
         startTime: startTime,
         endTime: endTime,
-        addBlackBox: true,
-        blackBoxHeight: blackBoxHeight || 150,
+        addBlackBox: false,
+        blackBoxHeight: 150,
         blackBoxColor: "black@1",
       }
     );
@@ -199,11 +203,7 @@ const main = async () => {
   }
 
   try {
-    await addVideoToConfig(
-      `./public/videos/${videoId}.mp4`,
-      "en",
-      `${videoId}`
-    );
+    await addVideoToConfig(`./public/videos/${videoId}.mp4`);
   } catch (err) {
     console.error("❌ Erreur :", err);
   }
