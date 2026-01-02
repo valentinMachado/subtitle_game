@@ -202,11 +202,10 @@ function secondsToSRTTime(seconds) {
 // Fonction pour convertir les sous-titres en format SRT
 function subtitlesToSRT(subtitles) {
   return subtitles
-    .filter((s) => s.text && s.text.trim() !== "")
     .map((s, i) => {
       return `${i + 1}
 ${secondsToSRTTime(s.start)} --> ${secondsToSRTTime(s.end)}
-${s.text}
+${s.text ? s.text : s.placeholder}
 
 `;
     })
@@ -288,6 +287,7 @@ const renderSubtitles = async (inputVideoPath, subtitles, index) => {
       .replace(/\\/g, "/");
 
     // Générer le fichier SRT
+    console.log(subtitles.length, "sous-titres");
     const srtContent = subtitlesToSRT(subtitles);
     fs.writeFileSync(srtPath, srtContent, { encoding: "utf8" });
 
@@ -319,11 +319,10 @@ const renderSubtitles = async (inputVideoPath, subtitles, index) => {
     ffmpegProcess.on("close", (code) => {
       if (code !== 0) {
         console.error("FFmpeg exited with code", code);
-        return res.status(500).json({ error: "FFMPEG_FAILED" });
       }
 
       if (!fs.existsSync(outputPath)) {
-        return res.status(500).json({ error: "NO_OUTPUT" });
+        console.error(`Output file ${outputPath} does not exist`);
       }
 
       // Suppression asynchrone du fichier .srt

@@ -71,8 +71,9 @@
           overflow-x: auto;
           gap: 4px;
           padding: 4px;
-          border: 1px solid #ccc;
+          border: 1px solid #454545;
           height: 20%;
+          background-color: #d9d9d9;
         "
       ></div>
     </div>
@@ -150,13 +151,23 @@
 
           <div class="action-menu-panel">
             <button class="action-menu-item" data-action="emoticon">⛔</button>
+            <button class="action-menu-item" data-action="emoticon">⚠️</button>
             <button class="action-menu-item" data-action="emoticon">❓</button>
+            <button class="action-menu-item" data-action="emoticon">❗</button>
+
             <button class="action-menu-item" data-action="emoticon">🙃</button>
             <button class="action-menu-item" data-action="emoticon">😅</button>
             <button class="action-menu-item" data-action="emoticon">😂</button>
+            <button class="action-menu-item" data-action="emoticon">🤣</button>
+
             <button class="action-menu-item" data-action="emoticon">😁</button>
-            <button class="action-menu-item" data-action="emoticon">👍</button>
             <button class="action-menu-item" data-action="emoticon">🙂</button>
+            <button class="action-menu-item" data-action="emoticon">😐</button>
+
+            <button class="action-menu-item" data-action="emoticon">👍</button>
+            <button class="action-menu-item" data-action="emoticon">👎</button>
+            <button class="action-menu-item" data-action="emoticon">✅</button>
+            <button class="action-menu-item" data-action="emoticon">💡</button>
           </div>
         </div>
 
@@ -296,6 +307,8 @@
               break;
             }
           }
+
+          if (!playerSubtitles) playerSubtitles = videoCfg.subtitles;
 
           if (cached) {
             const subtitlesCached = JSON.parse(cached);
@@ -865,6 +878,10 @@
             });
         }
 
+        function isTemplate(id) {
+          return id.startsWith("template-");
+        }
+
         function renderLibraryView() {
           librarySelect.innerHTML = "";
 
@@ -882,7 +899,7 @@
           Object.values(videosById)
             .sort((a, b) => a.id.toString().localeCompare(b.id.toString()))
             .forEach((v) => {
-              if (v.id === "tutoriel") return;
+              if (isTemplate(v.id)) return;
               const option = document.createElement("option");
               option.value = v.id;
               option.textContent = `${v.id} (${v.lang})`;
@@ -1125,7 +1142,7 @@
 
         // init from cache
         const cachedViewId = localStorage.getItem("currentViewId");
-        if (cachedViewId) {
+        if (cachedViewId && cachedViewId !== "playerView") {
           displayView(cachedViewId);
         } else {
           requestAnimationFrame(() => updateHeight());
@@ -1153,8 +1170,6 @@
       }
 
       main();
-
-      localStorage.clear();
     </script>
   </body>
 </html>
