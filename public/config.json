@@ -1,0 +1,282 @@
+{
+  "videos": [
+    {
+      "id": "template-1",
+      "lang": "ru",
+      "path": "videos/template-1.mp4",
+      "subtitles": [
+        {
+          "start": 4.3659999999999854,
+          "end": 6.81899999999996,
+          "placeholder": "1 Не догнал, не догнал!"
+        },
+        {
+          "start": 13.32400000000007,
+          "end": 16.986000000000104,
+          "placeholder": "2 - Ну, обогнал? - Твоя взяла."
+        },
+        {
+          "start": 17.19900000000007,
+          "end": 23.06600000000003,
+          "placeholder": "3 За то, что признался, подарю тебе обещанное."
+        },
+        {
+          "start": 30.906999999999925,
+          "end": 33.06400000000008,
+          "placeholder": "4 Ну и чудеса!"
+        },
+        {
+          "start": 33.2829999999999,
+          "end": 36.36400000000003,
+          "placeholder": "5 Мы без этого не можем."
+        },
+        {
+          "start": 36.57400000000007,
+          "end": 38.8599999999999,
+          "placeholder": "6 А ведь ты и впрямь колдун!"
+        },
+        {
+          "start": 44.031999999999925,
+          "end": 45.27600000000007,
+          "placeholder": "7 Иван."
+        },
+        {
+          "start": 45.94900000000007,
+          "end": 48.4849999999999,
+          "placeholder": "8 - Воротись! - Зачем?"
+        },
+        {
+          "start": 48.740999999999985,
+          "end": 53.11400000000003,
+          "placeholder": "9 - Ты самое главное забыл. - Что я ещё забыл?"
+        },
+        {
+          "start": 53.32400000000007,
+          "end": 56.819999999999936,
+          "placeholder": "10 Ты забыл старому человеку спасибо сказать"
+        },
+        {
+          "start": 57.07400000000007,
+          "end": 60.15599999999995,
+          "placeholder": "11 и земной поклон отдать."
+        },
+        {
+          "start": 60.365999999999985,
+          "end": 63.28099999999995,
+          "placeholder": "12 Каждому кланяться - голова отвалится."
+        },
+        {
+          "start": 63.656999999999925,
+          "end": 66.40699999999993,
+          "placeholder": "13 Пусть тебе медведь кланяется."
+        },
+        {
+          "start": 66.61500000000001,
+          "end": 71.404,
+          "placeholder": "14 Ну что ж, пусть по-твоему сбудется."
+        },
+        {
+          "start": 71.65699999999993,
+          "end": 75.06999999999994,
+          "placeholder": "15 Медведь мне будет кланяться,"
+        },
+        {
+          "start": 75.2829999999999,
+          "end": 78.44599999999991,
+          "placeholder": "16 а согнётся твоя спина."
+        }
+      ]
+    }
+  ],
+  "template-1": {
+    "defaultSubtitles": [
+      {
+        "start": 4.3659999999999854,
+        "end": 6.81899999999996,
+        "text": "Bienvenue, bienvenue, bienvenue, bienvenue...",
+        "placeholder": "1 Не догнал, не догнал!"
+      },
+      {
+        "start": 13.32400000000007,
+        "end": 16.986000000000104,
+        "text": "Mon brave un coup de main?",
+        "placeholder": "2 - Ну, обогнал? - Твоя взяла."
+      },
+      {
+        "start": 17.19900000000007,
+        "end": 23.06600000000003,
+        "text": "Très bien, vous etes ici sur la vue édition ✍",
+        "placeholder": "3 За то, что признался, подарю тебе обещанное."
+      },
+      {
+        "start": 30.906999999999925,
+        "end": 33.06400000000008,
+        "placeholder": "Incroyable un arc vient d'apparaitre!"
+      },
+      {
+        "start": 33.2829999999999,
+        "end": 36.36400000000003,
+        "text": "Je ne vous sens pas très concentré?",
+        "placeholder": "5 Мы без этого не можем."
+      },
+      {
+        "start": 36.57400000000007,
+        "end": 38.8599999999999,
+        "placeholder": "Attendez il faut que je l'essaye!"
+      },
+      {
+        "start": 44.031999999999925,
+        "end": 45.27600000000007,
+        "text": "Ivan.",
+        "placeholder": "7 Иван."
+      },
+      {
+        "start": 45.94900000000007,
+        "end": 48.4849999999999,
+        "text": "Reviens! Pourquoi?",
+        "placeholder": "8 - Воротись! - Зачем?"
+      },
+      {
+        "start": 48.740999999999985,
+        "end": 53.11400000000003,
+        "text": "Parce que ca va etre fun. - On parle de combien de fun?",
+        "placeholder": "9 - Ты самое главное забыл. - Что я ещё забыл?"
+      },
+      {
+        "start": 53.32400000000007,
+        "end": 56.819999999999936,
+        "text": "Assez de fun pour que tu te calme et m'écoute un petit peu",
+        "placeholder": "10 Ты забыл старому человеку спасибо сказать"
+      },
+      {
+        "start": 57.07400000000007,
+        "end": 60.15599999999995,
+        "text": "Tu es donc sur la vue édition ✍",
+        "placeholder": "11 и земной поклон отдать."
+      },
+      {
+        "start": 60.365999999999985,
+        "end": 63.28099999999995,
+        "placeholder": "Vraiment ca m'interesse pas, j'ai un arc maintenant.."
+      },
+      {
+        "start": 63.656999999999925,
+        "end": 66.40699999999993,
+        "placeholder": "J'adore l'ac et je m'en vais tirer quelques flèches."
+      },
+      {
+        "start": 66.61500000000001,
+        "end": 71.404,
+        "text": "Va va Ivan, mais sache qu'il y a d'autres choses sur cette vue.",
+        "placeholder": "14 Ну что ж, пусть по-твоему сбудется."
+      },
+      {
+        "start": 71.65699999999993,
+        "end": 75.06999999999994,
+        "text": "Tu peux sélectionner des clips fait dans la vue 📚",
+        "placeholder": "15 Медведь мне будет кланяться,"
+      },
+      {
+        "start": 75.2829999999999,
+        "end": 78.44599999999991,
+        "text": "Ou encore cliquer sur le bouton 📄",
+        "placeholder": "16 а согнётся твоя спина."
+      }
+    ],
+    "players": [
+      {
+        "name": "Cliquez ici",
+        "subtitles": [
+          {
+            "start": 4.3659999999999854,
+            "end": 6.81899999999996,
+            "placeholder": "C'est encore moi, c'est encore moi, c'est encore moi..."
+          },
+          {
+            "start": 13.32400000000007,
+            "end": 16.986000000000104,
+            "placeholder": "Alors? - Une sensation de deja vu."
+          },
+          {
+            "start": 17.19900000000007,
+            "end": 23.06600000000003,
+            "placeholder": "Très bien, vous etes ici sur la vue édition 🤝"
+          },
+          {
+            "start": 30.906999999999925,
+            "end": 33.06400000000008,
+            "placeholder": "Ca alors, je pensais l'avoir perdue."
+          },
+          {
+            "start": 33.2829999999999,
+            "end": 36.36400000000003,
+            "placeholder": "Vous aimez donc les arcs."
+          },
+          {
+            "start": 36.57400000000007,
+            "end": 38.8599999999999,
+            "placeholder": "Evidement comme tous le monde!"
+          },
+          {
+            "start": 44.031999999999925,
+            "end": 45.27600000000007,
+            "placeholder": "Ivan."
+          },
+          {
+            "start": 45.94900000000007,
+            "end": 48.4849999999999,
+            "placeholder": "Arrete tes conneries! - Pourquoi?"
+          },
+          {
+            "start": 48.740999999999985,
+            "end": 53.11400000000003,
+            "placeholder": "Il y a plus de choses à expliquer ici. - On parle de combien de chose?"
+          },
+          {
+            "start": 53.32400000000007,
+            "end": 56.819999999999936,
+            "placeholder": "Tout d'abord 🤝 est partagé avec les autres joueurs 🤖"
+          },
+          {
+            "start": 57.07400000000007,
+            "end": 60.15599999999995,
+            "placeholder": "Et tu peux réagir 💬 a.."
+          },
+          {
+            "start": 60.365999999999985,
+            "end": 63.28099999999995,
+            "placeholder": "Vraiment il faudrait que tu te mette à l'arc."
+          },
+          {
+            "start": 63.656999999999925,
+            "end": 66.40699999999993,
+            "placeholder": "Mais ouais super ton truc @++"
+          },
+          {
+            "start": 66.61500000000001,
+            "end": 71.404,
+            "placeholder": "On verra Ivan, mais je pense pas que tu as tout compris."
+          },
+          {
+            "start": 71.65699999999993,
+            "end": 75.06999999999994,
+            "placeholder": "Tu peux éditer des clips 📚 et les monter ensemble 📽️"
+          },
+          {
+            "start": 75.2829999999999,
+            "end": 78.44599999999991,
+            "placeholder": "Mais d'abord sélectionne le clip template-2 📚"
+          }
+        ]
+      }
+    ]
+  },
+  "library_videos": [
+    {
+      "id": "frosty",
+      "lang": "ru",
+      "path": "./library_videos/frosty.mp4",
+      "srt": "./library_videos/frosty.srt"
+    }
+  ]
+}

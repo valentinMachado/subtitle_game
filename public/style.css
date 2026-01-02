@@ -126,7 +126,8 @@ video {
 }
 
 .seekButton {
-  width: 30px;
+  width: 50px;
+  min-height: 30px;
   font-size: 0.75rem;
   padding: 5px 8px;
 }
@@ -229,7 +230,7 @@ video {
 }
 
 .pulse-once {
-  animation: pulseOnce 1000ms ease-out;
+  animation: pulseOnce 600ms ease-out;
 }
 
 @keyframes pulseOnce {
@@ -250,11 +251,11 @@ video {
 /* ===== DESKTOP VERSION ===== */
 @media screen and (min-width: 1024px) {
   #videoContainer {
-    height: 55vh; /* Vidéo plus grande */
+    height: 45vh; /* Vidéo plus grande */
   }
 
   .viewContainer {
-    top: 55vh !important;
+    top: 45vh !important;
   }
 }
 

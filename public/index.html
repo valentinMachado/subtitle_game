@@ -284,33 +284,29 @@
 
           playerSubtitles = null;
 
+          for (let key in state.players) {
+            if (playerName === state.players[key].name) {
+              playerSubtitles = state.players[key].subtitles;
+              break;
+            }
+          }
+
           if (cached) {
             const subtitlesCached = JSON.parse(cached);
-            playerSubtitles = videoCfg.subtitles.map((s, index) => {
+            playerSubtitles = playerSubtitles.map((s, index) => {
               return {
                 ...s,
-                text: subtitlesCached[index] ? subtitlesCached[index].text : "",
+                text:
+                  subtitlesCached[index] && subtitlesCached[index].text != ""
+                    ? subtitlesCached[index].text
+                    : "",
               };
             });
-          } else {
-            for (let key in state.players) {
-              if (playerName === state.players[key].name) {
-                playerSubtitles = state.players[key].subtitles;
-                break;
-              }
-            }
-
-            if (!playerSubtitles) {
-              playerSubtitles = videoCfg.subtitles.map((s) => ({
-                ...s,
-                text: "",
-              }));
-            }
           }
 
           localStorage.setItem(
             `subs_${currentVideoId}`,
-            JSON.stringify(playerSubtitles)
+            JSON.stringify(playerSubtitles.map((s) => ({ text: s.text })))
           );
           cleanupOtherCaches(videoCfg.id);
           renderSubtitles();
@@ -704,6 +700,10 @@
           socket.emit("updateTimeline", timelineClips);
         }
 
+        submitButton.addEventListener("animationend", () => {
+          submitButton.textContent = "📄";
+        });
+
         /* ================= SOCKET GAMESTATE ================= */
         let currentEmoticons = {};
         socket.on("gameState", async (state) => {
@@ -717,6 +717,15 @@
           }
 
           renderClipSelect(state.video.id);
+
+          if (currentViewId == "playerView" && state.receivedSubtitles) {
+            submitButton.classList.remove("pulse-once"); // reset au cas où
+            void submitButton.offsetWidth; // force reflow
+            submitButton.classList.add("pulse-once");
+            submitButton.textContent = "👋";
+          }
+
+          // opti
 
           if (!isRemoteVisible) return;
 
@@ -1137,6 +1146,8 @@
       }
 
       main();
+
+      localStorage.clear();
     </script>
   </body>
 </html>

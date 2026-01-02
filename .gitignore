@@ -142,6 +142,5 @@ vite.config.ts.timestamp-*
 /public/videos/
 /public/library_videos/
 /public/render/
-/public/config.json
 dl_video.js
 

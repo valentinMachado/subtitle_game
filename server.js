@@ -37,6 +37,7 @@ const gameState = {
   timeline: [],
   renderUrl: null,
   finishRender: false,
+  receivedSubtitles: false,
 };
 
 const app = express();
@@ -80,18 +81,16 @@ const loadVideoId = async (id) => {
     p.submitted = false;
     p.submitHasBeenPlayed = true;
 
-    if (isTemplate(gameState.video.id)) {
-      p.subtitles = config[gameState.video.id].subtitlesPlayer;
-    } else {
-      p.subtitles = config.videos[gameState.video.index].subtitles;
-    }
+    p.subtitles =
+      config[gameState.video.id]?.players[p.id]?.subtitles ||
+      config.videos[gameState.video.index].subtitles;
   });
 
   currentTemplatePlayerIds.forEach(([id]) => {
     delete gameState.players[id];
   });
 
-  if (isTemplate(gameState.video.id)) {
+  if (isTemplate(gameState.video.id) && config[gameState.video.id]) {
     Object.entries(config[gameState.video.id].players).forEach(
       ([id, player]) => {
         const gamePlayer = {
@@ -113,7 +112,7 @@ const loadVideoId = async (id) => {
 };
 
 let config = loadConfig();
-loadVideoId("tutoriel");
+loadVideoId("template-1");
 
 const mapUUIDCancelled = new Map();
 let currentVideoEndPromiseUUID = null;
@@ -401,13 +400,20 @@ io.on("connection", (socket) => {
       const playerId = crypto.randomUUID();
       socket.playerId = playerId;
 
+      // console.log(
+      //   playerId,
+      //   " registered",
+      //   isTemplate(gameState.video.id),
+      //   config,
+      //   gameState.video.id
+      // );
+
       gameState.players[playerId] = {
         name: playerName || "Joueur " + Math.floor(Math.random() * 1000),
         submitted: false,
         submitHasBeenPlayed: true, // wait submission of srt
         subtitles: isTemplate(gameState.video.id)
-          ? config[gameState.video.id]?.subtitlesPlayer ||
-            config.videos[gameState.video.index].subtitles
+          ? config[gameState.video.id].defaultSubtitles
           : config.videos[gameState.video.index].subtitles,
       };
 
@@ -485,7 +491,9 @@ io.on("connection", (socket) => {
     player.submitHasBeenPlayed = false;
     console.log(player.name, "submitted subtitles");
 
+    gameState.receivedSubtitles = true;
     io.emit("gameState", gameState);
+    gameState.receivedSubtitles = false;
   });
 
   // ----- Video navigation -----
