@@ -11,7 +11,8 @@
     <!-- ================= VIDEO ================= -->
     <div id="videoContainer">
       <div id="viewInfo">✍</div>
-      <video id="video" controls playsinline></video>
+      <video id="gameVideo" controls playsinline></video>
+      <video id="libraryVideo" style="display: none"></video>
       <div id="subtitleOverlayLocal" class="subtitleOverlay"></div>
       <div
         id="subtitleOverlayRemote"
@@ -21,12 +22,16 @@
     </div>
 
     <!-- ================= PLAYER VIEW ================= -->
-    <div id="playerView">
+    <div id="playerView" class="viewContainer">
       <div id="subtitlesList"></div>
     </div>
 
     <!-- ================= REMOTE VIEW ================= -->
-    <div id="remoteView" style="display: none; gap: 16px; max-width: 100vw">
+    <div
+      id="remoteView"
+      class="viewContainer"
+      style="display: none; gap: 16px; max-width: 100vw"
+    >
       <div style="display: flex; width: 100%; height: 100%">
         <!-- Colonne gauche -->
         <div style="flex: 1; display: flex; flex-direction: column; gap: 8px">
@@ -60,6 +65,28 @@
       </div>
     </div>
 
+    <!-- ================= LIBRARY VIEW ================= -->
+    <div id="libraryView" class="viewContainer" style="display: none">
+      <div class="libraryLayout">
+        <div class="librarySources">
+          <div id="sourceList"></div>
+        </div>
+
+        <div class="libraryEditor">
+          <video id="libraryVideo" controls></video>
+
+          <div class="clipControls">
+            <button id="markIn">IN</button>
+            <button id="markOut">OUT</button>
+            <span id="clipRange"></span>
+          </div>
+
+          <input id="clipName" placeholder="Nom du clip" />
+          <button id="createClip">Créer le clip</button>
+        </div>
+      </div>
+    </div>
+
     <!-- ================= FOOTER ================= -->
     <div id="subtitleForm">
       <div class="row">
@@ -67,11 +94,8 @@
           <button class="action-menu-toggle">👀</button>
 
           <div class="action-menu-panel">
-            <button class="action-menu-item" data-action="timelineView">
-              🕥
-            </button>
-            <button class="action-menu-item" data-action="sectionView">
-              🔬
+            <button class="action-menu-item" data-action="libraryView">
+              🎞️
             </button>
             <button class="action-menu-item" data-action="remoteView">
               🤝
@@ -106,7 +130,7 @@
       async function main() {
         /* ================= DOM ================= */
         const viewInfo = document.getElementById("viewInfo");
-        const video = document.getElementById("video");
+        const gameVideo = document.getElementById("gameVideo");
         const subtitleOverlayLocal = document.getElementById(
           "subtitleOverlayLocal"
         );
@@ -131,6 +155,7 @@
 
         const playerView = document.getElementById("playerView");
         const remoteView = document.getElementById("remoteView");
+        const libraryView = document.getElementById("libraryView");
 
         const videoSelect = document.getElementById("videoSelect");
         const playersList = document.getElementById("playersList");
@@ -182,7 +207,7 @@
         socket.on("reload", () => location.reload());
 
         /* ================= INIT DISPLAY ================= */
-        video.style.display = "block";
+        gameVideo.style.display = "block";
         subtitleOverlayLocal.style.display = "block";
         subtitleOverlayRemote.style.display = "none";
         playerView.style.display = "block";
@@ -214,8 +239,8 @@
 
         /* ================= LOCAL VIDEO ================= */
         function loadLocalVideo(state, videoCfg) {
-          video.src = videoCfg.path;
-          video.load();
+          gameVideo.src = videoCfg.path;
+          gameVideo.load();
           const cached = localStorage.getItem(`subs_${videoCfg.id}`);
 
           playerSubtitles = null;
@@ -316,7 +341,7 @@
         }
 
         const renderLocalOverlay = () => {
-          const t = video.currentTime;
+          const t = gameVideo.currentTime;
           const active = playerSubtitles.find(
             (s) => t >= s.start && t <= s.end
           );
@@ -354,17 +379,12 @@
           currentViewId = id;
 
           viewInfo.textContent =
-            id === "playerView"
-              ? "✍"
-              : id === "remoteView"
-              ? "🤝"
-              : id === "timelineView"
-              ? "🕥"
-              : "🔬";
+            id === "playerView" ? "✍" : id === "remoteView" ? "🤝" : "🎞️";
 
           localStorage.setItem("currentViewId", currentViewId);
           playerView.style.display = id === "playerView" ? "block" : "none";
           remoteView.style.display = id === "remoteView" ? "block" : "none";
+          libraryView.style.display = id === "libraryView" ? "block" : "none";
 
           isRemoteVisible = id === "remoteView";
 
@@ -383,8 +403,8 @@
 
           emoticonActionMenu.style.display = isRemoteVisible ? "block" : "none";
 
-          video.controls = !isRemoteVisible;
-          video.pause();
+          gameVideo.controls = !isRemoteVisible;
+          gameVideo.pause();
 
           if (isRemoteVisible) socket.emit("needGameState");
 
@@ -445,7 +465,7 @@
           renderSubtitles();
 
           // forcer recalcul overlay / active subtitle / scroll
-          video.dispatchEvent(new Event("timeupdate"));
+          gameVideo.dispatchEvent(new Event("timeupdate"));
           if (isRemoteVisible) {
             displayView("playerView");
           }
@@ -466,7 +486,7 @@
 
         window.focusSubtitle = (i) => {
           isEditingSubtitle = true;
-          video.pause();
+          gameVideo.pause();
           seekTo(playerSubtitles[i].start);
 
           if (!isMobile()) return;
@@ -506,10 +526,10 @@
           renderLocalOverlay();
         };
         window.seekTo = (t) => {
-          video.currentTime = Math.min(video.duration, t + 0.01);
+          gameVideo.currentTime = Math.min(video.duration, t + 0.01);
         };
 
-        video.addEventListener("timeupdate", () => {
+        gameVideo.addEventListener("timeupdate", () => {
           // Overlay remote
           if (isRemoteVisible) renderRemoteSubtitles();
           else renderLocalOverlay();
@@ -529,23 +549,23 @@
         async function applyRemoteVideoState(videoState, videoCfg) {
           if (lastAppliedVideoState.id !== videoState.id) {
             applyingRemoteChange = true;
-            video.src = videoCfg.path;
+            gameVideo.src = videoCfg.path;
             applyingRemoteChange = false;
           }
 
-          if (videoState.playing && video.paused) {
+          if (videoState.playing && gameVideo.paused) {
             applyingRemoteChange = true;
-            video.play().catch(() => {});
+            gameVideo.play().catch(() => {});
             applyingRemoteChange = false;
           }
-          if (!videoState.playing && !video.paused) {
+          if (!videoState.playing && !gameVideo.paused) {
             applyingRemoteChange = true;
-            video.pause();
+            gameVideo.pause();
             applyingRemoteChange = false;
           }
-          if (Math.abs(video.currentTime - videoState.time) > 1) {
+          if (Math.abs(gameVideo.currentTime - videoState.time) > 1) {
             applyingRemoteChange = true;
-            video.currentTime = videoState.time;
+            gameVideo.currentTime = videoState.time;
             applyingRemoteChange = false;
           }
           lastAppliedVideoState = { ...videoState };
@@ -553,7 +573,7 @@
 
         function renderRemoteSubtitles() {
           if (!lastGameState) return;
-          const t = video.currentTime;
+          const t = gameVideo.currentTime;
           const {
             selectedPlayerId,
             players,
@@ -615,7 +635,7 @@
                 emoticon.appendChild(textEl);
 
                 // random position on videoContainer
-                const videoRect = video.getBoundingClientRect();
+                const videoRect = gameVideo.getBoundingClientRect();
                 const x =
                   videoRect.width * 0.5 +
                   (Math.random() - 0.5) * 2 * videoRect.width * 0.3;
@@ -645,14 +665,14 @@
           const videoState = state.video;
 
           // Synchronisation vidéo
-          if (Math.abs(video.currentTime - videoState.time) > 1) {
+          if (Math.abs(gameVideo.currentTime - videoState.time) > 1) {
             applyingRemoteChange = true;
-            video.currentTime = videoState.time;
+            gameVideo.currentTime = videoState.time;
             applyingRemoteChange = false;
           }
 
-          if (videoState.playing && video.paused) video.play();
-          if (!videoState.playing && !video.paused) video.pause();
+          if (videoState.playing && gameVideo.paused) gameVideo.play();
+          if (!videoState.playing && !gameVideo.paused) gameVideo.pause();
         });
 
         const playerState = () => {
@@ -850,7 +870,7 @@
                   break;
                 case "playerView":
                 case "remoteView":
-                case "sectionView":
+                case "libraryView":
                   displayView(action);
                   break;
               }
