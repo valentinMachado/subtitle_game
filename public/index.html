@@ -135,8 +135,13 @@
         </div>
 
         <span id="playerName"></span>
-        <select id="clipSelect" style="width: 150px"></select>
-        <select id="libraryClipSelect" style="display: none"></select>
+
+        <div style="display: inline-flex; align-items: center; gap: 4px">
+          <span id="clipLabel" style="cursor: inherit">📚</span>
+          <select id="clipSelect" style="width: 150px"></select>
+          <select id="libraryClipSelect" style="display: none"></select>
+        </div>
+
         <button id="deleteClipButton" style="display: none">❌</button>
         <button id="submitButton">📄</button>
 
@@ -190,6 +195,7 @@
         const playerView = document.getElementById("playerView");
         const remoteView = document.getElementById("remoteView");
         const libraryView = document.getElementById("libraryView");
+        const clipLabel = document.getElementById("clipLabel");
         const librarySelect = document.getElementById("librarySelect");
         const libraryClipSelect = document.getElementById("libraryClipSelect");
         const deleteClipButton = document.getElementById("deleteClipButton");
@@ -433,6 +439,7 @@
             id === "libraryView" ? "block" : "none";
 
           submitButton.style.display = id === "playerView" ? "block" : "none";
+
           clipSelect.style.display =
             id === "playerView" || id === "remoteView" ? "block" : "none";
 
