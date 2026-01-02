@@ -147,6 +147,8 @@ async function addVideoToConfig(videoPath) {
     lang,
     path: `videos/${clipId}.mp4`,
     subtitles: getClipSubtitles(),
+    startTime: startTime,
+    endTime: endTime,
   };
 
   const existingIndex = config.videos.findIndex((v) => clipId === v.id);
