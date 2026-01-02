@@ -12,7 +12,7 @@
     <div id="videoContainer">
       <div id="viewInfo">✍</div>
       <video id="gameVideo" controls playsinline></video>
-      <video id="libraryVideo" style="display: none"></video>
+      <video id="libraryVideo" controls style="display: none"></video>
       <div id="subtitleOverlayLocal" class="subtitleOverlay"></div>
       <div
         id="subtitleOverlayRemote"
@@ -35,7 +35,6 @@
       <div style="display: flex; width: 100%; height: 100%">
         <!-- Colonne gauche -->
         <div style="flex: 1; display: flex; flex-direction: column; gap: 8px">
-          <select id="videoSelect" style="width: 100%"></select>
           <div id="playersList"></div>
         </div>
 
@@ -68,22 +67,41 @@
     <!-- ================= LIBRARY VIEW ================= -->
     <div id="libraryView" class="viewContainer" style="display: none">
       <div class="libraryLayout">
-        <div class="librarySources">
-          <div id="sourceList"></div>
-        </div>
+        <select id="librarySelect"></select>
 
         <div class="libraryEditor">
-          <video id="libraryVideo" controls></video>
+          <label for="startClipInput">Début (hh:mm:ss)</label>
+          <input
+            id="startClipInput"
+            type="text"
+            required
+            placeholder="00:00:00"
+            pattern="^([0-1]\d|2[0-3]):([0-5]\d):([0-5]\d)$"
+            title="Format attendu : hh:mm:ss"
+          />
 
-          <div class="clipControls">
-            <button id="markIn">IN</button>
-            <button id="markOut">OUT</button>
-            <span id="clipRange"></span>
-          </div>
+          <label for="endClipInput">Fin (hh:mm:ss)</label>
+          <input
+            id="endClipInput"
+            type="text"
+            required
+            placeholder="00:00:00"
+            pattern="^([0-1]\d|2[0-3]):([0-5]\d):([0-5]\d)$"
+            title="Format attendu : hh:mm:ss"
+          />
 
-          <input id="clipName" placeholder="Nom du clip" />
-          <button id="createClip">Créer le clip</button>
+          <input
+            id="clipName"
+            required
+            placeholder="Nom du clip"
+            pattern=".*\S.*"
+            title="Le nom du clip ne peut pas être vide"
+          />
+          <button id="createClip">💾</button>
         </div>
+
+        <select id="libraryClipSelect"></select>
+        <button id="deleteClipButton">❌</button>
       </div>
     </div>
 
@@ -108,7 +126,9 @@
 
         <span id="playerName"></span>
         <button id="submitButton">📄</button>
-        <button id="downloadButton" disabled>💾</button>
+        <select id="clipSelect"></select>
+        <button id="downloadButton" style="display: none" disabled>💾</button>
+
         <div id="emoticonActionMenu" class="action-menu" style="display: none">
           <button class="action-menu-toggle">💬</button>
 
@@ -131,6 +151,7 @@
         /* ================= DOM ================= */
         const viewInfo = document.getElementById("viewInfo");
         const gameVideo = document.getElementById("gameVideo");
+        const libraryVideo = document.getElementById("libraryVideo");
         const subtitleOverlayLocal = document.getElementById(
           "subtitleOverlayLocal"
         );
@@ -156,13 +177,17 @@
         const playerView = document.getElementById("playerView");
         const remoteView = document.getElementById("remoteView");
         const libraryView = document.getElementById("libraryView");
+        const librarySelect = document.getElementById("librarySelect");
+        const libraryClipSelect = document.getElementById("libraryClipSelect");
+        const deleteClipButton = document.getElementById("deleteClipButton");
 
-        const videoSelect = document.getElementById("videoSelect");
+        const clipSelect = document.getElementById("clipSelect");
         const playersList = document.getElementById("playersList");
         const savesList = document.getElementById("savesList");
 
         /* ================= STATE ================= */
         let videosById = {};
+        let libraryVideosById = {};
         let currentViewId = "playerView";
         let playerSubtitles = [];
         let currentVideoId = null;
@@ -185,11 +210,10 @@
         /* ================= PLAYER NAME ================= */
         let playerName = localStorage.getItem("playerName");
         if (!playerName) {
-          playerName =
-            prompt(
-              "Quel est ton pseudo ?",
-              "Joueur " + Math.floor(Math.random() * 1000)
-            ) || "Joueur";
+          playerName = prompt(
+            "Quel est ton pseudo ?",
+            "Joueur " + Math.floor(Math.random() * 1000)
+          );
           localStorage.setItem("playerName", playerName);
         }
         playerNameSpan.textContent = "🤖 " + playerName;
@@ -197,6 +221,9 @@
         /* ================= CONFIG ================= */
         const cfg = await fetch("/config.json").then((r) => r.json());
         videosById = Object.fromEntries(cfg.videos.map((v) => [v.id, v]));
+        libraryVideosById = Object.fromEntries(
+          cfg.library_videos.map((v) => [v.id, v])
+        );
 
         /* ================= SOCKET ================= */
         const socket = io({ reconnection: true, timeout: 20000 });
@@ -386,6 +413,19 @@
           remoteView.style.display = id === "remoteView" ? "block" : "none";
           libraryView.style.display = id === "libraryView" ? "block" : "none";
 
+          gameVideo.style.display =
+            id === "playerView" || id === "remoteView" ? "block" : "none";
+          libraryVideo.style.display = id === "libraryView" ? "block" : "none";
+
+          if (id === "playerView" || id === "remoteView") {
+            socket.emit("needGameState");
+          } else {
+            libraryVideo.src = libraryVideosById[librarySelect.value].path;
+          }
+
+          clipSelect.style.display =
+            id === "playerView" || id === "remoteView" ? "block" : "none";
+
           isRemoteVisible = id === "remoteView";
 
           subtitleOverlayLocal.style.display = isRemoteVisible
@@ -395,24 +435,19 @@
             ? "block"
             : "none";
 
-          downloadButton.style.display = isRemoteVisible ? "none" : "block";
+          downloadButton.style.display = isRemoteVisible ? "block" : "none";
           downloadButton.disabled = downloadButtonDisable();
+
+          submitButton.style.display = isRemoteVisible ? "block" : "none";
 
           saveButton.style.display = !isRemoteVisible ? "none" : "block";
           saveNameInput.style.display = !isRemoteVisible ? "none" : "block";
-
           emoticonActionMenu.style.display = isRemoteVisible ? "block" : "none";
-
           gameVideo.controls = !isRemoteVisible;
           gameVideo.pause();
 
-          if (isRemoteVisible) socket.emit("needGameState");
-
           requestAnimationFrame(() => updateHeight());
         };
-
-        const cachedViewId = localStorage.getItem("currentViewId");
-        if (cachedViewId) displayView(cachedViewId);
 
         let resizeTimeout;
         let lastHeight = window.innerHeight;
@@ -526,7 +561,7 @@
           renderLocalOverlay();
         };
         window.seekTo = (t) => {
-          gameVideo.currentTime = Math.min(video.duration, t + 0.01);
+          gameVideo.currentTime = Math.min(gameVideo.duration, t + 0.01);
         };
 
         gameVideo.addEventListener("timeupdate", () => {
@@ -609,19 +644,18 @@
           if (currentVideoId !== state.video.id) {
             currentVideoId = state.video.id;
             loadLocalVideo(state, videoCfg);
-            renderSaves();
           }
 
+          renderClipSelect(state.video.id);
+
           if (!isRemoteVisible) return;
+
+          renderSaves();
 
           let newEmoticons = {};
           Object.entries(state.emoticons).forEach(([name, text]) => {
             newEmoticons[name] = text;
-            if (currentEmoticons[name]) {
-              // already poped
-              return;
-            } else {
-              currentEmoticons[name] = text;
+            if (!currentEmoticons[name]) {
               const createEmoticon = () => {
                 const emoticon = document.createElement("div");
                 emoticon.className = "emoticon";
@@ -661,7 +695,6 @@
           downloadButton.disabled = downloadButtonDisable();
           await applyRemoteVideoState(state.video, videoCfg);
           renderPlayers(state);
-          renderVideoSelect(state.video.id);
           const videoState = state.video;
 
           // Synchronisation vidéo
@@ -686,9 +719,9 @@
           return null;
         };
 
-        videoSelect.onchange = () => {
-          if (videoSelect.value)
-            socket.emit("selectVideoById", videoSelect.value);
+        clipSelect.onchange = () => {
+          if (clipSelect.value)
+            socket.emit("selectVideoById", clipSelect.value);
         };
 
         function renderPlayers(state) {
@@ -709,8 +742,8 @@
             .join("");
         }
         window.selectPlayer = (id) => socket.emit("selectPlayer", id);
-        function renderVideoSelect(activeId) {
-          videoSelect.innerHTML = "";
+        function renderClipSelect(activeId) {
+          clipSelect.innerHTML = "";
 
           Object.values(videosById)
             .sort((a, b) => a.id.toString().localeCompare(b.id.toString()))
@@ -723,9 +756,43 @@
                 option.selected = true;
               }
 
-              videoSelect.appendChild(option);
+              clipSelect.appendChild(option);
             });
         }
+
+        function renderLibraryView() {
+          librarySelect.innerHTML = "";
+
+          Object.values(libraryVideosById)
+            .sort((a, b) => a.id.toString().localeCompare(b.id.toString()))
+            .forEach((v) => {
+              const option = document.createElement("option");
+              option.value = v.id;
+              option.textContent = `${v.id} (${v.lang})`;
+              librarySelect.appendChild(option);
+            });
+
+          libraryClipSelect.innerHTML = "";
+
+          Object.values(videosById)
+            .sort((a, b) => a.id.toString().localeCompare(b.id.toString()))
+            .forEach((v) => {
+              if (v.id === "tutoriel") return;
+              const option = document.createElement("option");
+              option.value = v.id;
+              option.textContent = `${v.id} (${v.lang})`;
+              libraryClipSelect.appendChild(option);
+            });
+        }
+        renderLibraryView();
+
+        deleteClipButton.onclick = () => {
+          socket.emit("deleteClip", libraryClipSelect.value);
+        };
+
+        librarySelect.onchange = () => {
+          libraryVideo.src = libraryVideosById[librarySelect.value].path;
+        };
 
         /* ================= SAVE BUTTON ================= */
         let saveTriggered = false;
@@ -832,6 +899,115 @@
           });
         };
 
+        /* ================= LIBRARY VIEW ================= */
+
+        const startInput = document.getElementById("startClipInput");
+        const endInput = document.getElementById("endClipInput");
+        const nameInput = document.getElementById("clipName");
+        const createBtn = document.getElementById("createClip");
+
+        const seekToInputValue = (input) => {
+          if (!input.checkValidity()) return;
+
+          const t = toSeconds(input.value);
+          if (Number.isNaN(t)) return;
+
+          libraryVideo.currentTime = t;
+        };
+
+        startInput.addEventListener("focus", () => {
+          seekToInputValue(startInput);
+        });
+
+        startInput.addEventListener("input", () => {
+          seekToInputValue(startInput);
+        });
+
+        endInput.addEventListener("focus", () => {
+          seekToInputValue(endInput);
+        });
+
+        endInput.addEventListener("input", () => {
+          seekToInputValue(endInput);
+        });
+
+        libraryVideo.addEventListener("timeupdate", () => {
+          // Vérifie que le champ est valide
+          if (!endInput.checkValidity()) return;
+
+          const endSec = toSeconds(endInput.value);
+          if (!Number.isFinite(endSec)) return;
+
+          // Si le temps courant dépasse la fin, pause la vidéo
+          if (libraryVideo.currentTime >= endSec) {
+            libraryVideo.pause();
+            libraryVideo.currentTime = endSec; // optionnel : ajuste exactement à la fin
+          }
+        });
+
+        let isCreatingClip = false;
+        createBtn.addEventListener("click", () => {
+          if (isCreatingClip) return;
+
+          // 1. Validation HTML native
+          if (!startInput.checkValidity() || !endInput.checkValidity()) {
+            // Force l’affichage du message du navigateur
+            startInput.reportValidity();
+            endInput.reportValidity();
+            return;
+          }
+
+          // 2. Récupération des valeurs
+          const start = startInput.value;
+          const end = endInput.value;
+          const name = nameInput.value.trim();
+
+          if (!name) {
+            alert("Nom du clip obligatoire");
+            return;
+          }
+
+          const id = normalizeToId(name);
+
+          if (videosById[id]) {
+            alert("Un clip porte deja ce nom");
+            return;
+          }
+
+          // 3. Conversion en secondes
+          const startSec = toSeconds(start);
+          const endSec = toSeconds(end);
+
+          // 4. Vérifications métier
+          if (endSec <= startSec) {
+            alert("La fin doit être après le début");
+            return;
+          }
+
+          if (endSec - startSec < 5) {
+            alert("La durée minimale est de 5 secondes");
+            return;
+          }
+
+          if (endSec - startSec > 120) {
+            alert("La durée maximale est de 2 minutes");
+            return;
+          }
+
+          // 5. Utilisation finale
+          createBtn.textContent = "⌛";
+
+          isCreatingClip = true;
+
+          socket.emit("createClip", {
+            libraryVideoId: librarySelect.value,
+            lang: libraryVideosById[librarySelect.value].lang,
+            id,
+            start,
+            end,
+          });
+        });
+
         /* ================= CLEAR BUTTON ================= */
         playerNameSpan.onclick = () => {
           if (!confirm("Changez de nom ?")) return;
@@ -884,6 +1060,10 @@
             .querySelectorAll(".action-menu.open")
             .forEach((m) => m.classList.remove("open"));
         });
+
+        // init from cache
+        const cachedViewId = localStorage.getItem("currentViewId");
+        if (cachedViewId) displayView(cachedViewId);
       }
 
       function fmt(sec) {
@@ -891,6 +1071,21 @@
         d.setSeconds(sec);
         return d.toISOString().substr(11, 8);
       }
+      function toSeconds(hhmmss) {
+        const [h, m, s] = hhmmss.split(":").map(Number);
+        return h * 3600 + m * 60 + s;
+      }
+      function normalizeToId(text) {
+        return text
+          .toString()
+          .normalize("NFD") // sépare accents
+          .replace(/[\u0300-\u036f]/g, "") // supprime accents
+          .toLowerCase()
+          .trim()
+          .replace(/[^a-z0-9]+/g, "-") // caractères non autorisés → "-"
+          .replace(/^-+|-+$/g, ""); // trim des "-"
+      }
+
       main();
     </script>
   </body>

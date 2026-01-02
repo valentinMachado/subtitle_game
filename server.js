@@ -44,7 +44,13 @@ function loadConfig() {
 }
 
 const loadVideoId = async (id) => {
-  const index = config.videos.findIndex((v) => v.id === id);
+  let index = config.videos.findIndex((v) => v.id === id);
+
+  if (index === -1) {
+    console.warn(`⚠️ Video "${id}" non trouvée dans config.json`);
+    index = 0;
+  }
+
   gameState.video.index = index;
   gameState.video.id = config.videos[gameState.video.index].id;
   gameState.video.time = 0;
@@ -81,6 +87,7 @@ const loadVideoId = async (id) => {
     };
     gameState.players.tutorialPlayer = tutorialPlayer;
     gameState.selectedPlayerId = "tutorialPlayer";
+    console.log("Tutoriel chargé");
   } else {
     delete gameState.players.tutorialPlayer;
   }
@@ -354,6 +361,78 @@ io.on("connection", (socket) => {
     loadVideoId(videoId);
   });
 
+  socket.on("deleteClip", (clipId) => {
+    const configPath = path.resolve("./public/config.json");
+
+    if (!fs.existsSync(configPath)) {
+      console.error("❌ config.json introuvable !");
+      return;
+    }
+
+    const config = JSON.parse(fs.readFileSync(configPath, "utf-8"));
+    const index = config.videos.findIndex((v) => v.id === clipId);
+
+    if (index === -1) {
+      console.warn(`⚠️ Clip "${clipId}" non trouvé dans config.json`);
+      return;
+    }
+
+    // Récupère le chemin de la vidéo à supprimer
+    const videoPath = path.resolve("./public", config.videos[index].path);
+
+    // Supprime la vidéo si elle existe
+    if (fs.existsSync(videoPath)) {
+      try {
+        fs.unlinkSync(videoPath);
+        console.log(`✅ Vidéo "${clipId}" supprimée : ${videoPath}`);
+      } catch (err) {
+        console.error(`❌ Erreur lors de la suppression de la vidéo :`, err);
+      }
+    }
+
+    // Supprime le clip de la config
+    config.videos.splice(index, 1);
+
+    try {
+      fs.writeFileSync(configPath, JSON.stringify(config, null, 2), "utf-8");
+      console.log(`✅ Clip "${clipId}" supprimé de config.json`);
+    } catch (err) {
+      console.error("❌ Erreur lors de la mise à jour de config.json :", err);
+    }
+  });
+
+  socket.on("createClip", ({ libraryVideoId, lang, id, start, end }) => {
+    // Arguments séparés, pas de concaténation dans une string
+    const args = [
+      "./create_clip.js",
+      libraryVideoId,
+      id, // ton clipId
+      lang,
+      start,
+      end,
+    ];
+
+    const child = spawn("node", args, { stdio: ["ignore", "pipe", "pipe"] });
+
+    // Affiche stdout en temps réel
+    child.stdout.on("data", (data) => {
+      console.log(`[stdout] ${data.toString()}`);
+    });
+
+    // Affiche stderr en temps réel
+    child.stderr.on("data", (data) => {
+      console.error(`[stderr] ${data.toString()}`);
+    });
+
+    child.on("close", (code) => {
+      if (code === 0) {
+        console.log(`✅ Clip "${id}" créé avec succès !`);
+      } else {
+        console.error(`❌ FFmpeg/Script terminé avec code ${code}`);
+      }
+    });
+  });
+
   // ----- Player selection -----
 
   socket.on("selectPlayer", (playerId) => {
@@ -379,7 +458,6 @@ io.on("connection", (socket) => {
   socket.on("disconnect", () => {
     if (!socket.playerId) return;
 
-    console.log(gameState.players[socket.playerId], " disconnected");
     delete gameState.players[socket.playerId];
 
     if (gameState.selectedPlayerId === socket.playerId) {
