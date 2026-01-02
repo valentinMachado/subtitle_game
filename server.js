@@ -30,6 +30,7 @@ const gameState = {
   players: {},
   emoticons: {},
   clipSaves: {},
+  timeline: [],
 };
 
 const app = express();
@@ -322,6 +323,29 @@ io.on("connection", (socket) => {
 
   // ----- Subtitles -----
 
+  socket.on("updateTimeline", (timelineClips) => {
+    if (!gameState.video?.id) return;
+
+    // Mettre à jour la timeline du gameState
+    gameState.timeline = timelineClips;
+
+    // Propager à tous les clients
+    io.emit("gameState", gameState);
+  });
+
+  socket.on("deleteClipSave", ({ videoId, index }) => {
+    if (!gameState.clipSaves?.[videoId]) return;
+
+    gameState.clipSaves[videoId].splice(index, 1);
+
+    // supprime de la timeline tous les clips qui ont le même nom et videoId
+    gameState.timeline = gameState.timeline.filter(
+      (clip) => !(clip.videoId === videoId && clip.index === index)
+    );
+
+    io.emit("gameState", gameState);
+  });
+
   socket.on("saveRemoteSubtitles", ({ videoId, name, subtitles }) => {
     if (!gameState.video || videoId !== gameState.video.id) return;
 
@@ -334,13 +358,6 @@ io.on("connection", (socket) => {
     });
 
     // 🔁 On broadcast le gamestate mis à jour
-    io.emit("gameState", gameState);
-  });
-
-  socket.on("deleteClipSave", ({ videoId, index }) => {
-    if (!gameState.clipSaves) return;
-    if (!gameState.clipSaves[videoId]) return;
-    gameState.clipSaves[videoId].splice(index, 1);
     io.emit("gameState", gameState);
   });
 

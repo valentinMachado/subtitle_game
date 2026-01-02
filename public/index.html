@@ -32,7 +32,7 @@
       class="viewContainer"
       style="display: none; gap: 16px; max-width: 100vw"
     >
-      <div style="display: flex; width: 100%; height: 100%">
+      <div style="display: flex; width: 100%; height: 80%">
         <!-- Colonne gauche -->
         <div style="flex: 1; display: flex; flex-direction: column; gap: 8px">
           <div id="playersList"></div>
@@ -61,7 +61,20 @@
           />
           <button id="saveButton" disabled style="display: none">💾</button>
         </div>
+
+        <!-- RemoteView Timeline Container -->
       </div>
+      <div
+        id="timelineContainer"
+        style="
+          display: flex;
+          overflow-x: auto;
+          gap: 4px;
+          padding: 4px;
+          border: 1px solid #ccc;
+          height: 20%;
+        "
+      ></div>
     </div>
 
     <!-- ================= LIBRARY VIEW ================= -->
@@ -113,7 +126,7 @@
 
           <div class="action-menu-panel">
             <button class="action-menu-item" data-action="libraryView">
-              🎞️
+              📚
             </button>
             <button class="action-menu-item" data-action="remoteView">
               🤝
@@ -126,8 +139,7 @@
 
         <span id="playerName"></span>
         <button id="submitButton">📄</button>
-        <select id="clipSelect"></select>
-        <button id="downloadButton" style="display: none" disabled>💾</button>
+        <select id="clipSelect" style="width: 150px"></select>
 
         <div id="emoticonActionMenu" class="action-menu" style="display: none">
           <button class="action-menu-toggle">💬</button>
@@ -143,6 +155,8 @@
             <button class="action-menu-item" data-action="emoticon">🙂</button>
           </div>
         </div>
+
+        <button id="renderButton" disabled style="display: none">🎞️</button>
       </div>
     </div>
 
@@ -167,7 +181,6 @@
 
         const saveButton = document.getElementById("saveButton");
         const saveNameInput = document.getElementById("saveNameInput");
-        const downloadButton = document.getElementById("downloadButton");
 
         const emoticonActionMenu =
           document.getElementById("emoticonActionMenu");
@@ -180,6 +193,8 @@
         const librarySelect = document.getElementById("librarySelect");
         const libraryClipSelect = document.getElementById("libraryClipSelect");
         const deleteClipButton = document.getElementById("deleteClipButton");
+
+        const renderButton = document.getElementById("renderButton");
 
         const clipSelect = document.getElementById("clipSelect");
         const playersList = document.getElementById("playersList");
@@ -260,10 +275,6 @@
           return true;
         };
 
-        const downloadButtonDisable = () => {
-          return !playerSubtitles.every((s) => s.text && s.text !== "");
-        };
-
         /* ================= LOCAL VIDEO ================= */
         function loadLocalVideo(state, videoCfg) {
           gameVideo.src = videoCfg.path;
@@ -302,7 +313,6 @@
           );
           cleanupOtherCaches(videoCfg.id);
           renderSubtitles();
-          downloadButton.disabled = downloadButtonDisable();
         }
 
         function cleanupOtherCaches(id) {
@@ -342,23 +352,24 @@
 
           const saves =
             (state.clipSaves && state.clipSaves[state.video.id]) || [];
-
           if (!saves.length) {
             savesList.innerHTML = "<em>Aucun sous-titre pour ce clip</em>";
             return;
           }
 
           savesList.innerHTML = saves
-            .map(
-              (s, index) => `
-      <div class="saveItem">
-        <span>${s.name}</span>
-        <div>
-          <button onclick="loadSave(${index})">✍</button>
-          <button onclick="deleteSave(${index})">❌</button>
+            .map((s, index) => {
+              return `
+        <div class="saveItem" style="display:flex; justify-content:space-between; align-items:center;">
+          <span>${s.name}</span>
+          <div>
+            <button onclick="loadSave(${index})">✍</button>
+            <button onclick="deleteSave(${index})">❌</button>
+            <button onclick="selectClipToInsert('${state.video.id}', ${index})">➕</button>
+          </div>
         </div>
-      </div>`
-            )
+      `;
+            })
             .join("");
         }
 
@@ -401,7 +412,7 @@
           currentViewId = id;
 
           viewInfo.textContent =
-            id === "playerView" ? "✍" : id === "remoteView" ? "🤝" : "🎞️";
+            id === "playerView" ? "✍" : id === "remoteView" ? "🤝" : "📚";
 
           localStorage.setItem("currentViewId", currentViewId);
           playerView.style.display = id === "playerView" ? "block" : "none";
@@ -418,8 +429,11 @@
             libraryVideo.src = libraryVideosById[librarySelect.value].path;
           }
 
+          submitButton.style.display = id === "playerView" ? "block" : "none";
           clipSelect.style.display =
             id === "playerView" || id === "remoteView" ? "block" : "none";
+
+          renderButton.style.display = id === "remoteView" ? "block" : "none";
 
           isRemoteVisible = id === "remoteView";
 
@@ -429,11 +443,6 @@
           subtitleOverlayRemote.style.display = isRemoteVisible
             ? "block"
             : "none";
-
-          downloadButton.style.display = isRemoteVisible ? "block" : "none";
-          downloadButton.disabled = downloadButtonDisable();
-
-          submitButton.style.display = isRemoteVisible ? "block" : "none";
 
           saveButton.style.display = !isRemoteVisible ? "none" : "block";
           saveNameInput.style.display = !isRemoteVisible ? "none" : "block";
@@ -447,8 +456,6 @@
         let resizeTimeout;
         let lastHeight = window.innerHeight;
         let currentSubtitleIndex = null;
-
-        requestAnimationFrame(() => updateHeight());
 
         window.addEventListener("resize", () => {
           const newHeight = window.innerHeight;
@@ -513,7 +520,6 @@
         window.stopEditing = () => {
           isEditingSubtitle = false;
           showAllSubtitles();
-          downloadButton.disabled = downloadButtonDisable();
         };
         function hideOtherSubtitles(i) {
           document
@@ -616,6 +622,81 @@
           } else subtitleOverlayRemote.style.display = "none";
         }
 
+        /* ================= TIMELINE ================= */
+
+        let selectedClipToInsert = null; // clip choisi pour insertion
+        let timelineClips = []; // clips actuellement dans la timeline
+
+        // Sélection d'un clip depuis la liste des saves
+        window.selectClipToInsert = function selectClipToInsert(
+          videoId,
+          saveIndex
+        ) {
+          const saves = lastGameState.clipSaves?.[videoId] || [];
+          const clip = saves[saveIndex];
+          if (!clip) return;
+          selectedClipToInsert = { videoId, ...clip, index: saveIndex };
+          renderTimeline();
+        };
+
+        // Render timeline avec slots ➕ uniquement si un clip est sélectionné
+        function renderTimeline() {
+          const container = document.getElementById("timelineContainer");
+          container.innerHTML = "";
+
+          const showSlots = !!selectedClipToInsert;
+
+          // Slot initial
+          if (showSlots) addSlot(0);
+
+          timelineClips.forEach((clip, i) => {
+            const div = document.createElement("div");
+            div.className = "timelineClipItem";
+            div.textContent = clip.videoId + " - " + clip.name;
+
+            // bouton delete
+            const delBtn = document.createElement("button");
+            delBtn.textContent = "❌";
+            delBtn.style.marginTop = "4px";
+            delBtn.onclick = (e) => {
+              e.stopPropagation();
+              timelineClips.splice(i, 1);
+              renderTimeline();
+              socket.emit("updateTimeline", timelineClips);
+            };
+            div.appendChild(delBtn);
+
+            container.appendChild(div);
+
+            // slot après le clip
+            if (showSlots) addSlot(i + 1);
+          });
+
+          // helper pour créer un slot
+          function addSlot(position) {
+            const slot = document.createElement("button");
+            slot.textContent = "➕";
+            slot.onclick = () => {
+              if (!selectedClipToInsert) return;
+              timelineClips.splice(position, 0, { ...selectedClipToInsert });
+              selectedClipToInsert = null; // désélection
+              renderTimeline();
+              socket.emit("updateTimeline", timelineClips);
+            };
+            container.appendChild(slot);
+          }
+        }
+
+        function insertClip(index) {
+          if (!selectedClipToInsert) return;
+
+          // timelineClips est ton tableau global de la timeline
+          timelineClips.splice(index + 1, 0, { ...selectedClipToInsert });
+          selectedClipToInsert = null; // désélection
+          renderTimeline();
+          socket.emit("updateTimeline", timelineClips);
+        }
+
         /* ================= SOCKET GAMESTATE ================= */
         let currentEmoticons = {};
         socket.on("gameState", async (state) => {
@@ -632,6 +713,19 @@
 
           if (!isRemoteVisible) return;
 
+          renderButton.disabled = state.timeline.length === 0;
+
+          // Reset selectedClipToInsert si clip plus présent
+          if (selectedClipToInsert) {
+            const saves = state.clipSaves?.[selectedClipToInsert.videoId] || [];
+            const stillExists = saves.some(
+              (s) => s.name === selectedClipToInsert.name
+            );
+            if (!stillExists) selectedClipToInsert = null;
+          }
+          timelineClips = state.timeline; // mise à jour
+
+          renderTimeline();
           renderSaves();
 
           let newEmoticons = {};
@@ -674,7 +768,7 @@
           saveButton.disabled =
             !state?.selectedPlayerId ||
             !state.players[state.selectedPlayerId]?.submitted;
-          downloadButton.disabled = downloadButtonDisable();
+
           await applyRemoteVideoState(state.video, videoCfg);
           renderPlayers(state);
           const videoState = state.video;
@@ -838,13 +932,12 @@
           a.href = url;
           a.setAttribute("target", "_blank");
           a.click();
-          downloadButton.textContent = "💾";
           flagDownload = false;
         });
-        downloadButton.onclick = () => {
+        const renderOnServer = () => {
           if (flagDownload) return;
           flagDownload = true;
-          downloadButton.textContent = "⌛";
+
           socket.emit("render", {
             isRemoteVisible,
             playerSubtitles,
@@ -1015,7 +1108,11 @@
 
         // init from cache
         const cachedViewId = localStorage.getItem("currentViewId");
-        if (cachedViewId) displayView(cachedViewId);
+        if (cachedViewId) {
+          displayView(cachedViewId);
+        } else {
+          requestAnimationFrame(() => updateHeight());
+        }
       }
 
       function fmt(sec) {

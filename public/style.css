@@ -87,7 +87,7 @@ video {
 
 .viewContainer {
   position: fixed;
-  top: 35vh;
+  top: 33vh;
   left: 0;
   right: 0;
   overflow-y: auto;
@@ -158,6 +158,30 @@ video {
   border-radius: 4px;
 }
 
+.timelineClipItem {
+  display: flex; /* Flex horizontal */
+  justify-content: space-between; /* Texte à gauche, bouton à droite */
+  align-items: center; /* Centre verticalement le texte et le bouton */
+  border: 1px solid #333;
+  border-radius: 4px;
+  padding: 4px 8px;
+  min-width: 100px;
+  max-width: 100%; /* Pour rester dans le conteneur parent */
+  box-sizing: border-box;
+  word-break: break-word; /* Coupe le texte trop long */
+  position: relative;
+  margin-bottom: 4px;
+}
+
+.timelineClipItem button {
+  padding: 2px 6px;
+  flex-shrink: 0; /* Empêche le bouton de rétrécir */
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
 /* ===== FOOTER ===== */
 #subtitleForm {
   position: fixed;
@@ -212,7 +236,6 @@ video {
 
   .viewContainer {
     top: 55vh !important;
-    height: 40vh;
   }
 }
 
