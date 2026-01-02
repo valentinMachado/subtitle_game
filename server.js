@@ -29,6 +29,7 @@ const gameState = {
   },
   players: {},
   emoticons: {},
+  clipSaves: {},
 };
 
 const app = express();
@@ -320,6 +321,28 @@ io.on("connection", (socket) => {
   socket.on("render", (data) => render(data, socket));
 
   // ----- Subtitles -----
+
+  socket.on("saveRemoteSubtitles", ({ videoId, name, subtitles }) => {
+    if (!gameState.video || videoId !== gameState.video.id) return;
+
+    if (!gameState.clipSaves) gameState.clipSaves = {};
+    if (!gameState.clipSaves[videoId]) gameState.clipSaves[videoId] = [];
+
+    gameState.clipSaves[videoId].push({
+      name,
+      subtitles,
+    });
+
+    // 🔁 On broadcast le gamestate mis à jour
+    io.emit("gameState", gameState);
+  });
+
+  socket.on("deleteClipSave", ({ videoId, index }) => {
+    if (!gameState.clipSaves) return;
+    if (!gameState.clipSaves[videoId]) return;
+    gameState.clipSaves[videoId].splice(index, 1);
+    io.emit("gameState", gameState);
+  });
 
   socket.on("emoticon", ({ name, text }) => {
     if (gameState.emoticons[name]) return;

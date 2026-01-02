@@ -340,12 +340,8 @@
             return;
           }
 
-          const key = savesKey(state.video.id);
-          const cached = localStorage.getItem(key)
-            ? localStorage.getItem(key)
-            : null;
-
-          const saves = cached ? JSON.parse(cached) : [];
+          const saves =
+            (state.clipSaves && state.clipSaves[state.video.id]) || [];
 
           if (!saves.length) {
             savesList.innerHTML = "<em>Aucun sous-titre pour ce clip</em>";
@@ -354,15 +350,14 @@
 
           savesList.innerHTML = saves
             .map(
-              (s) => `
-                          <div class="saveItem">
-                            <span>${s.name}</span>
-                            <div>
-                              <button onclick="loadSave('${s.id}')">✍</button>
-                              <button onclick="deleteSave('${s.id}')">❌</button>
-                            </div>
-                          </div>
-                        `
+              (s, index) => `
+      <div class="saveItem">
+        <span>${s.name}</span>
+        <div>
+          <button onclick="loadSave(${index})">✍</button>
+          <button onclick="deleteSave(${index})">❌</button>
+        </div>
+      </div>`
             )
             .join("");
         }
@@ -474,49 +469,36 @@
           }, 50); // 50ms après le dernier resize, la hauteur est stabilisée
         });
 
-        window.loadSave = (saveId) => {
+        window.loadSave = (index) => {
           if (!lastGameState?.video?.id) return;
 
-          const key = savesKey(lastGameState.video.id);
-          const cached = localStorage.getItem(key)
-            ? localStorage.getItem(key)
-            : null;
-
-          const saves = cached ? JSON.parse(cached) : [];
-
-          const save = saves.find((s) => s.id === saveId);
+          const saves =
+            (lastGameState.clipSaves &&
+              lastGameState.clipSaves[lastGameState.video.id]) ||
+            [];
+          const save = saves[index];
           if (!save) return;
 
-          // ⚠️ LOCAL UNIQUEMENT
+          // ⚡ Copier les sous-titres dans playerSubtitles
           playerSubtitles = structuredClone(save.subtitles);
 
-          // persistance locale
-          localStorage.setItem(
-            `subs_${lastGameState.video.id}`,
-            JSON.stringify(playerSubtitles)
-          );
-
-          // 🔁 réhydrater complètement l’UI
+          // Réhydrater complètement l’UI
           renderSubtitles();
 
-          // forcer recalcul overlay / active subtitle / scroll
+          // Forcer recalcul overlay / scroll
           gameVideo.dispatchEvent(new Event("timeupdate"));
-          if (isRemoteVisible) {
-            displayView("playerView");
-          }
+
+          // Afficher playerView
+          displayView("playerView");
         };
 
-        window.deleteSave = (id) => {
-          const { video, selectedPlayerId } = lastGameState;
-          const key = savesKey(video.id);
-          const saves = JSON.parse(localStorage.getItem(key) || "[]");
+        window.deleteSave = (index) => {
+          if (!lastGameState?.video?.id) return;
 
-          localStorage.setItem(
-            key,
-            JSON.stringify(saves.filter((s) => s.id !== id))
-          );
+          const videoId = lastGameState.video.id;
 
-          renderSaves();
+          // 🔹 Demande serveur pour supprimer le save
+          socket.emit("deleteClipSave", { videoId, index });
         };
 
         window.focusSubtitle = (i) => {
@@ -798,82 +780,52 @@
         let saveTriggered = false;
 
         const saveSubtitles = () => {
-          if (saveTriggered) return; // empêche double trigger
+          if (saveTriggered) return; // empêche double clic
           saveTriggered = true;
 
-          try {
-            const name = saveNameInput.value.trim();
-            if (!name || !lastGameState) {
-              saveButton.textContent = "❌ Nom invalide";
-              setTimeout(() => {
-                saveButton.textContent = "💾";
-                saveTriggered = false;
-              }, 1000);
-              return;
-            }
-
-            const { selectedPlayerId, players, video } = lastGameState;
-            if (!selectedPlayerId || !players[selectedPlayerId]) {
-              saveButton.textContent = "❌";
-              setTimeout(() => {
-                saveButton.textContent = "💾";
-                saveTriggered = false;
-              }, 1000);
-              return;
-            }
-
-            const subtitles = players[selectedPlayerId].subtitles;
-            if (!subtitles || !subtitles.length) {
-              saveButton.textContent = "❌";
-              setTimeout(() => {
-                saveButton.textContent = "💾";
-                saveTriggered = false;
-              }, 1000);
-              return;
-            }
-
-            const key = savesKey(video.id);
-
-            const cached = localStorage.getItem(key)
-              ? localStorage.getItem(key)
-              : null;
-
-            const saves = cached ? JSON.parse(cached) : [];
-
-            saves.push({
-              id: Date.now().toString(),
-              name,
-              date: Date.now(),
-              subtitles,
-            });
-
-            try {
-              localStorage.setItem(key, JSON.stringify(saves));
-            } catch (e) {
-              saveButton.textContent = "❌";
-              setTimeout(() => {
-                saveButton.textContent = "💾";
-                saveTriggered = false;
-              }, 1000);
-              return;
-            }
-
-            renderSaves();
-
-            saveButton.textContent = "✅";
+          const name = saveNameInput.value.trim();
+          if (!name || !lastGameState) {
+            saveButton.textContent = "❌ Nom invalide";
             setTimeout(() => {
               saveButton.textContent = "💾";
               saveTriggered = false;
             }, 1000);
-          } catch (e) {
-            console.error(e);
-            saveButton.textContent = "❌ " + e.message;
-          } finally {
-            setTimeout(() => {
-              saveButton.textContent = "💾";
-              saveTriggered = false;
-            }, 1000);
+            return;
           }
+
+          const { selectedPlayerId, players, video } = lastGameState;
+          if (!selectedPlayerId || !players[selectedPlayerId]) {
+            saveButton.textContent = "❌";
+            setTimeout(() => {
+              saveButton.textContent = "💾";
+              saveTriggered = false;
+            }, 1000);
+            return;
+          }
+
+          const subtitles = players[selectedPlayerId].subtitles;
+          if (!subtitles || !subtitles.length) {
+            saveButton.textContent = "❌";
+            setTimeout(() => {
+              saveButton.textContent = "💾";
+              saveTriggered = false;
+            }, 1000);
+            return;
+          }
+
+          // 🔹 Envoi via socket au lieu de localStorage
+          socket.emit("saveRemoteSubtitles", {
+            videoId: video.id,
+            name,
+            subtitles,
+          });
+
+          // Feedback utilisateur
+          saveButton.textContent = "✅";
+          setTimeout(() => {
+            saveButton.textContent = "💾";
+            saveTriggered = false;
+          }, 1000);
         };
 
         // déclenchement unique pour click/touch
