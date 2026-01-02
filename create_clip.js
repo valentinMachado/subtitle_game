@@ -63,7 +63,7 @@ function clipSubtitles(subtitles, clipStart, clipEnd) {
     .map((s, index) => ({
       start: Math.max(0, s.start - clipStart),
       end: Math.min(clipEnd - clipStart, s.end - clipStart),
-      placeholder: index + 1 + " ...",
+      placeholder: index + 1 + " " + s.placeholder,
     }));
   return clipped;
 }

@@ -6,6 +6,10 @@ const { exec } = require("child_process");
 const path = require("path");
 const { spawn } = require("child_process");
 
+function isTemplate(id) {
+  return id.startsWith("template-");
+}
+
 function getVideoDuration(path) {
   return new Promise((resolve, reject) => {
     exec(
@@ -47,6 +51,7 @@ function loadConfig() {
   return JSON.parse(fs.readFileSync("public/config.json"));
 }
 
+const currentTemplatePlayerIds = [];
 const loadVideoId = async (id) => {
   let index = config.videos.findIndex((v) => v.id === id);
 
@@ -75,25 +80,33 @@ const loadVideoId = async (id) => {
     p.submitted = false;
     p.submitHasBeenPlayed = true;
 
-    if (id === "tutoriel") {
-      p.subtitles = config.tutorial.subtitlesPlayer;
+    if (isTemplate(gameState.video.id)) {
+      p.subtitles = config[gameState.video.id].subtitlesPlayer;
     } else {
       p.subtitles = config.videos[gameState.video.index].subtitles;
     }
   });
 
-  if (id == "tutoriel") {
-    const tutorialPlayer = {
-      name: "Continuez le tutoriel",
-      submitted: true,
-      submitHasBeenPlayed: false,
-      subtitles: config.tutorial.subtitlesTutorialPlayer,
-    };
-    gameState.players.tutorialPlayer = tutorialPlayer;
-    gameState.selectedPlayerId = "tutorialPlayer";
-    console.log("Tutoriel chargé");
-  } else {
-    delete gameState.players.tutorialPlayer;
+  currentTemplatePlayerIds.forEach(([id]) => {
+    delete gameState.players[id];
+  });
+
+  if (isTemplate(gameState.video.id)) {
+    Object.entries(config[gameState.video.id].players).forEach(
+      ([id, player]) => {
+        const gamePlayer = {
+          name: player.name,
+          submitted: true,
+          submitHasBeenPlayed: false,
+          subtitles: player.subtitles,
+        };
+        gameState.players[id] = gamePlayer;
+        currentTemplatePlayerIds.push(id);
+        id === 0 ? (gameState.selectedPlayerId = id) : null;
+      }
+    );
+
+    console.log(Object.values(gameState.players).map((p) => p.name));
   }
 
   io.emit("gameState", gameState);
@@ -332,8 +345,15 @@ const renderSubtitles = async (inputVideoPath, subtitles, index) => {
 
 let isRendering = false;
 const render = async () => {
+  if (!gameState.timeline.length) return;
   if (isRendering) return;
   isRendering = true;
+
+  if (fs.existsSync("./public/render/final.mp4")) {
+    fs.unlinkSync("./public/render/final.mp4");
+    gameState.renderUrl = null;
+    io.emit("gameState", gameState);
+  }
 
   try {
     for (let index = 0; index < gameState.timeline.length; index++) {
@@ -385,10 +405,10 @@ io.on("connection", (socket) => {
         name: playerName || "Joueur " + Math.floor(Math.random() * 1000),
         submitted: false,
         submitHasBeenPlayed: true, // wait submission of srt
-        subtitles:
-          gameState.video.id === "tutoriel"
-            ? config.tutorial.subtitlesPlayer
-            : config.videos[gameState.video.index].subtitles,
+        subtitles: isTemplate(gameState.video.id)
+          ? config[gameState.video.id]?.subtitlesPlayer ||
+            config.videos[gameState.video.index].subtitles
+          : config.videos[gameState.video.index].subtitles,
       };
 
       console.log(playerName, " connected");

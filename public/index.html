@@ -112,9 +112,6 @@
           />
           <button id="createClip">💾</button>
         </div>
-
-        <select id="libraryClipSelect"></select>
-        <button id="deleteClipButton">❌</button>
       </div>
     </div>
 
@@ -138,8 +135,10 @@
         </div>
 
         <span id="playerName"></span>
-        <button id="submitButton">📄</button>
         <select id="clipSelect" style="width: 150px"></select>
+        <select id="libraryClipSelect" style="display: none"></select>
+        <button id="deleteClipButton" style="display: none">❌</button>
+        <button id="submitButton">📄</button>
 
         <div id="emoticonActionMenu" class="action-menu" style="display: none">
           <button class="action-menu-toggle">💬</button>
@@ -431,6 +430,12 @@
             libraryVideo.src = libraryVideosById[librarySelect.value].path;
           }
 
+          libraryClipSelect.style.display =
+            id === "libraryView" ? "block" : "none";
+
+          deleteClipButton.style.display =
+            id === "libraryView" ? "block" : "none";
+
           submitButton.style.display = id === "playerView" ? "block" : "none";
           clipSelect.style.display =
             id === "playerView" || id === "remoteView" ? "block" : "none";
@@ -440,9 +445,8 @@
 
           isRemoteVisible = id === "remoteView";
 
-          subtitleOverlayLocal.style.display = isRemoteVisible
-            ? "none"
-            : "block";
+          subtitleOverlayLocal.style.display =
+            id === "playerView" ? "block" : "none";
           subtitleOverlayRemote.style.display = isRemoteVisible
             ? "block"
             : "none";
@@ -934,7 +938,9 @@
         // déclenchement unique pour click/touch
         saveButton.addEventListener("click", saveSubtitles);
 
-        renderButton.addEventListener("click", () => socket.emit("render"));
+        renderButton.addEventListener("click", () => {
+          socket.emit("render");
+        });
         goToRender.addEventListener("click", () => {
           window.location.href = "/render/final.mp4";
         });
