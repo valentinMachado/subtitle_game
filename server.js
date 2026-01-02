@@ -119,7 +119,7 @@ let currentVideoEndPromiseUUID = null;
 const createVideoEndPromise = () => {
   const duration = gameState.video.duration;
   const time = gameState.video.time;
-  const promiseDuration = duration * 1000 - time * 1000 + 5000;
+  const promiseDuration = duration * 1000 - time * 10000;
 
   const uuid = crypto.randomUUID();
 

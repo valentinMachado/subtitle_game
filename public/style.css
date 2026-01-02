@@ -152,7 +152,6 @@ video {
 }
 
 .saveItem {
-  display: inline-block;
   margin: 2px;
   padding: 2px 4px;
   border: 1px solid #333;

@@ -34,8 +34,29 @@
     >
       <div style="display: flex; width: 100%; height: 80%">
         <!-- Colonne gauche -->
-        <div style="flex: 1; display: flex; flex-direction: column; gap: 8px">
-          <div id="playersList"></div>
+        <div
+          style="
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-width: 70%;
+          "
+        >
+          <div style="display: flex; justify-content: space-between">
+            <input
+              id="saveNameInput"
+              placeholder="Nom de la sauvegarde"
+              value="sous-titres"
+              style="display: none; max-width: 80%"
+            />
+            <button id="saveButton" disabled style="display: none">💾</button>
+          </div>
+          <div id=""></div>
+          <div
+            id="playersList"
+            style="display: block; width: 100%; overflow-y: auto"
+          ></div>
         </div>
 
         <!-- Colonne droite -->
@@ -50,16 +71,8 @@
         >
           <div
             id="savesList"
-            class="savesList"
             style="display: block; width: 100%; overflow-y: auto"
           ></div>
-          <input
-            id="saveNameInput"
-            placeholder="Nom de la sauvegarde"
-            value="sous-titres"
-            style="display: none"
-          />
-          <button id="saveButton" disabled style="display: none">💾</button>
         </div>
 
         <!-- RemoteView Timeline Container -->
@@ -972,7 +985,8 @@
         saveButton.addEventListener("click", saveSubtitles);
 
         renderButton.addEventListener("click", () => {
-          socket.emit("render");
+          if (confirm("Etes-vous sur de vouloir lancer un rendu ?"))
+            socket.emit("render");
         });
         goToRender.addEventListener("click", () => {
           window.location.href = "/render/final.mp4";

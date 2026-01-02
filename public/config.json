@@ -224,7 +224,7 @@
       {
         "start": 63.656999999999925,
         "end": 66.40699999999993,
-        "placeholder": "J'adore l'ac et je m'en vais tirer quelques flèches."
+        "placeholder": "J'adore l'arc et je m'en vais tirer quelques flèches."
       },
       {
         "start": 66.61500000000001,
@@ -241,7 +241,7 @@
       {
         "start": 75.2829999999999,
         "end": 78.44599999999991,
-        "text": "Ou encore cliquer sur le bouton 📄",
+        "text": "Mais pour l'instant clique sur le bouton 📄",
         "placeholder": "16 а согнётся твоя спина."
       }
     ],
@@ -257,12 +257,12 @@
           {
             "start": 13.32400000000007,
             "end": 16.986000000000104,
-            "placeholder": "Alors? - Une sensation de deja vu."
+            "placeholder": "Alors? - Une sensation de deja vu ?"
           },
           {
             "start": 17.19900000000007,
             "end": 23.06600000000003,
-            "placeholder": "Très bien, vous etes ici sur la vue édition 🤝"
+            "placeholder": "Très bien, vous etes ici sur la vue partagée 🤝"
           },
           {
             "start": 30.906999999999925,
