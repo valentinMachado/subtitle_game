@@ -122,7 +122,7 @@
     <div id="subtitleForm">
       <div class="row">
         <div id="viewActionMenu" class="action-menu">
-          <button class="action-menu-toggle">👀</button>
+          <button class="action-menu-toggle">⚙️</button>
 
           <div class="action-menu-panel">
             <button class="action-menu-item" data-action="libraryView">
@@ -156,7 +156,8 @@
           </div>
         </div>
 
-        <button id="renderButton" disabled style="display: none">🎞️</button>
+        <button id="renderButton" disabled style="display: none">📽️</button>
+        <button id="goToRender" disabled style="display: none">🎞️</button>
       </div>
     </div>
 
@@ -195,6 +196,7 @@
         const deleteClipButton = document.getElementById("deleteClipButton");
 
         const renderButton = document.getElementById("renderButton");
+        const goToRender = document.getElementById("goToRender");
 
         const clipSelect = document.getElementById("clipSelect");
         const playersList = document.getElementById("playersList");
@@ -434,6 +436,7 @@
             id === "playerView" || id === "remoteView" ? "block" : "none";
 
           renderButton.style.display = id === "remoteView" ? "block" : "none";
+          goToRender.style.display = id === "remoteView" ? "block" : "none";
 
           isRemoteVisible = id === "remoteView";
 
@@ -714,6 +717,12 @@
           if (!isRemoteVisible) return;
 
           renderButton.disabled = state.timeline.length === 0;
+          goToRender.disabled = !state.renderUrl;
+          if (state.finishRender) {
+            goToRender.classList.remove("pulse-once"); // reset au cas où
+            void goToRender.offsetWidth; // force reflow
+            goToRender.classList.add("pulse-once");
+          }
 
           // Reset selectedClipToInsert si clip plus présent
           if (selectedClipToInsert) {
@@ -925,24 +934,10 @@
         // déclenchement unique pour click/touch
         saveButton.addEventListener("click", saveSubtitles);
 
-        let flagDownload = false;
-        socket.on("render_done", ({ url }) => {
-          // Créer un lien temporaire pour déclencher le téléchargement
-          const a = document.createElement("a");
-          a.href = url;
-          a.setAttribute("target", "_blank");
-          a.click();
-          flagDownload = false;
+        renderButton.addEventListener("click", () => socket.emit("render"));
+        goToRender.addEventListener("click", () => {
+          window.location.href = "/render/final.mp4";
         });
-        const renderOnServer = () => {
-          if (flagDownload) return;
-          flagDownload = true;
-
-          socket.emit("render", {
-            isRemoteVisible,
-            playerSubtitles,
-          });
-        };
 
         /* ================= LIBRARY VIEW ================= */
 

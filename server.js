@@ -31,6 +31,8 @@ const gameState = {
   emoticons: {},
   clipSaves: {},
   timeline: [],
+  renderUrl: null,
+  finishRender: false,
 };
 
 const app = express();
@@ -199,92 +201,173 @@ ${s.text}
     .join("");
 }
 
-const render = async ({ isRemoteVisible, playerSubtitles }, s) => {
-  const { video, selectedPlayerId, players } = gameState;
-  if (!video.id) {
-    return res.status(400).json({ error: "INVALID_STATE" });
+const concatVideos = async (count) => {
+  return new Promise((resolve, reject) => {
+    const outputDir = path.join("public", "render");
+    const concatFile = path.join(outputDir, "concat.txt");
+    const finalOutput = path.join(outputDir, "final.mp4");
+
+    if (!fs.existsSync(outputDir)) {
+      fs.mkdirSync(outputDir, { recursive: true });
+    }
+
+    const concatContent = Array.from({ length: count })
+      .map((_, i) => `file '${i}.mp4'`)
+      .join("\n");
+
+    fs.writeFileSync(concatFile, concatContent, "utf8");
+
+    const ffmpegArgs = [
+      "-f",
+      "concat",
+      "-safe",
+      "0",
+      "-i",
+      "concat.txt", // relatif au cwd
+      "-c",
+      "copy",
+      "-y",
+      "final.mp4", // relatif au cwd
+    ];
+
+    const ffmpegProcess = spawn("ffmpeg", ffmpegArgs, {
+      cwd: outputDir,
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+
+    ffmpegProcess.stderr.on("data", (data) => {
+      console.error("FFmpeg concat stderr:", data.toString());
+    });
+
+    ffmpegProcess.on("close", (code) => {
+      if (code !== 0) {
+        return reject(new Error("CONCAT_FAILED"));
+      }
+      resolve({ finalOutput, concatFile });
+    });
+  });
+};
+
+const cleanupRenderFiles = (count, concatFile) => {
+  const outputDir = path.join("public", "render");
+
+  for (let i = 0; i < count; i++) {
+    const clipPath = path.join(outputDir, `${i}.mp4`);
+    if (fs.existsSync(clipPath)) {
+      fs.unlinkSync(clipPath);
+    }
   }
-  const renderSubtitles = async (subtitles) => {
-    return new Promise((resolve) => {
-      const videoConfig = config.videos[video.index];
-      const inputVideoPath = path
-        .resolve("public", videoConfig.path)
-        .replace(/\\/g, "/");
-      const outputDir = path.join("public", "downloads/created");
-      if (!fs.existsSync(outputDir))
-        fs.mkdirSync(outputDir, { recursive: true });
 
-      const renderId = Date.now().toString();
-      const srtPath = path
-        .join(outputDir, `${renderId}.srt`)
-        .replace(/\\/g, "/");
-      const outputPath = path
-        .join(outputDir, `${renderId}.mp4`)
-        .replace(/\\/g, "/");
+  if (fs.existsSync(concatFile)) {
+    fs.unlinkSync(concatFile);
+  }
 
-      // Générer le fichier SRT
-      const srtContent = subtitlesToSRT(subtitles);
-      fs.writeFileSync(srtPath, srtContent, { encoding: "utf8" });
+  console.log("Temporary render files cleaned up");
+};
 
-      // Commande FFmpeg
-      const ffmpegArgs = [
-        "-i",
-        inputVideoPath,
-        "-vf",
-        `subtitles=${srtPath.replace(
-          /:/g,
-          "\\\\:"
-        )}:force_style='Fontsize=24,PrimaryColour=&HFFFFFF&'`,
-        "-c:a",
-        "copy",
-        "-y",
-        outputPath,
-      ];
+const renderSubtitles = async (inputVideoPath, subtitles, index) => {
+  return new Promise((resolve) => {
+    const outputDir = path.join("public", "render");
+    if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir, { recursive: true });
+    const renderId = index;
+    const srtPath = path.join(outputDir, `${renderId}.srt`).replace(/\\/g, "/");
+    const outputPath = path
+      .join(outputDir, `${renderId}.mp4`)
+      .replace(/\\/g, "/");
 
-      console.log("Spawning FFmpeg with args:", ffmpegArgs.join(" "));
+    // Générer le fichier SRT
+    const srtContent = subtitlesToSRT(subtitles);
+    fs.writeFileSync(srtPath, srtContent, { encoding: "utf8" });
 
-      const ffmpegProcess = spawn("ffmpeg", ffmpegArgs, {
-        stdio: ["ignore", "pipe", "pipe"],
-      });
+    // Commande FFmpeg
+    const ffmpegArgs = [
+      "-i",
+      inputVideoPath,
+      "-vf",
+      `subtitles=${srtPath.replace(
+        /:/g,
+        "\\\\:"
+      )}:force_style='Fontsize=24,PrimaryColour=&HFFFFFF&'`,
+      "-c:a",
+      "copy",
+      "-y",
+      outputPath,
+    ];
 
-      ffmpegProcess.stderr.on("data", (data) => {
-        console.error(`FFmpeg stderr: ${data}`);
-      });
+    console.log("Spawning FFmpeg with args:", ffmpegArgs.join(" "));
 
-      ffmpegProcess.on("close", (code) => {
-        if (code !== 0) {
-          console.error("FFmpeg exited with code", code);
-          return res.status(500).json({ error: "FFMPEG_FAILED" });
+    const ffmpegProcess = spawn("ffmpeg", ffmpegArgs, {
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+
+    ffmpegProcess.stderr.on("data", (data) => {
+      console.error(`FFmpeg stderr: ${data}`);
+    });
+
+    ffmpegProcess.on("close", (code) => {
+      if (code !== 0) {
+        console.error("FFmpeg exited with code", code);
+        return res.status(500).json({ error: "FFMPEG_FAILED" });
+      }
+
+      if (!fs.existsSync(outputPath)) {
+        return res.status(500).json({ error: "NO_OUTPUT" });
+      }
+
+      // Suppression asynchrone du fichier .srt
+      fs.unlink(srtPath, (err) => {
+        if (err) {
+          console.error(
+            `Erreur lors de la suppression du fichier ${srtPath}:`,
+            err
+          );
+        } else {
+          console.log(`Fichier ${srtPath} supprimé avec succès.`);
+          resolve();
         }
-
-        if (!fs.existsSync(outputPath)) {
-          return res.status(500).json({ error: "NO_OUTPUT" });
-        }
-
-        // Suppression asynchrone du fichier .srt
-        fs.unlink(srtPath, (err) => {
-          if (err) {
-            console.error(
-              `Erreur lors de la suppression du fichier ${srtPath}:`,
-              err
-            );
-          } else {
-            console.log(`Fichier ${srtPath} supprimé avec succès.`);
-            resolve(`/downloads/created/${renderId}.mp4`);
-          }
-        });
       });
     });
-  };
+  });
+};
+
+let isRendering = false;
+const render = async () => {
+  if (isRendering) return;
+  isRendering = true;
 
   try {
-    const url = await renderSubtitles(
-      isRemoteVisible ? players[selectedPlayerId].subtitles : playerSubtitles
+    for (let index = 0; index < gameState.timeline.length; index++) {
+      const videoId = gameState.timeline[index].videoId;
+      const subtitles = gameState.timeline[index].subtitles;
+
+      let videoIndex = config.videos.findIndex((v) => v.id === videoId);
+
+      console.log("Rendering subtitles for video", videoId, "at index", index);
+
+      await renderSubtitles(
+        `public/${config.videos[videoIndex].path}`,
+        subtitles,
+        index
+      );
+    }
+
+    // Concat finale
+    const { finalOutput, concatFile } = await concatVideos(
+      gameState.timeline.length
     );
-    s.emit("render_done", { url });
+
+    gameState.renderUrl = finalOutput;
+    gameState.finishRender = true;
+
+    io.emit("gameState", gameState);
+
+    gameState.finishRender = false;
+    isRendering = false;
+
+    // Cleanup
+    cleanupRenderFiles(gameState.timeline.length, concatFile);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "SERVER_ERROR" });
   }
 };
 
@@ -319,7 +402,7 @@ io.on("connection", (socket) => {
     socket.emit("gameState", gameState);
   });
 
-  socket.on("render", (data) => render(data, socket));
+  socket.on("render", () => render());
 
   // ----- Subtitles -----
 
