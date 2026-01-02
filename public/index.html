@@ -163,24 +163,27 @@
           <button class="action-menu-toggle">💬</button>
 
           <div class="action-menu-panel">
-            <button class="action-menu-item" data-action="emoticon">⛔</button>
-            <button class="action-menu-item" data-action="emoticon">⚠️</button>
-            <button class="action-menu-item" data-action="emoticon">❓</button>
-            <button class="action-menu-item" data-action="emoticon">❗</button>
-
-            <button class="action-menu-item" data-action="emoticon">🙃</button>
-            <button class="action-menu-item" data-action="emoticon">😅</button>
-            <button class="action-menu-item" data-action="emoticon">😂</button>
-            <button class="action-menu-item" data-action="emoticon">🤣</button>
-
-            <button class="action-menu-item" data-action="emoticon">😁</button>
-            <button class="action-menu-item" data-action="emoticon">🙂</button>
+            <button class="action-menu-item" data-action="emoticon">😕</button>
+            <!-- déroutant -->
             <button class="action-menu-item" data-action="emoticon">😐</button>
+            <!-- neutre / moyen -->
+            <button class="action-menu-item" data-action="emoticon">😬</button>
+            <!-- maladroit / gênant -->
+
+            <button class="action-menu-item" data-action="emoticon">🙂</button>
+            <!-- agréable -->
+            <button class="action-menu-item" data-action="emoticon">😂</button>
+            <!-- fonctionne très bien -->
+
+            <button class="action-menu-item" data-action="emoticon">❗</button>
+            <!-- choque / faux -->
+            <button class="action-menu-item" data-action="emoticon">❓</button>
+            <!-- pas clair -->
 
             <button class="action-menu-item" data-action="emoticon">👍</button>
+            <!-- ok -->
             <button class="action-menu-item" data-action="emoticon">👎</button>
-            <button class="action-menu-item" data-action="emoticon">✅</button>
-            <button class="action-menu-item" data-action="emoticon">💡</button>
+            <!-- pas ok -->
           </div>
         </div>
 
@@ -485,6 +488,8 @@
           emoticonActionMenu.style.display = isRemoteVisible ? "block" : "none";
           gameVideo.controls = !isRemoteVisible;
           gameVideo.pause();
+
+          libraryVideo.pause();
 
           requestAnimationFrame(() => updateHeight());
         };

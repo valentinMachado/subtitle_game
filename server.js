@@ -162,7 +162,7 @@ const createVideoEndPromise = () => {
     }
     console.log("Non annulée", pUUID);
 
-    gameState.video.playing = false;
+    // gameState.video.playing = false; TODO un event state qui declenche le play au selectPlayerId
 
     delete mapUUIDCancelled.get(pUUID);
 
