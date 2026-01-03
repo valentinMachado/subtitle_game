@@ -45,13 +45,13 @@
         >
           <div style="display: flex; justify-content: space-between">
             <button id="videoStateButton">🔄</button>
+            <button id="saveButton" disabled style="display: none">💾</button>
             <input
               id="saveNameInput"
               placeholder="Nom de la sauvegarde"
               value="sous-titres"
-              style="display: none; max-width: 80%"
+              style="display: none"
             />
-            <button id="saveButton" disabled style="display: none">💾</button>
           </div>
           <div id=""></div>
           <div
@@ -70,6 +70,7 @@
             min-width: 0;
           "
         >
+          <select id="clipSelect"></select>
           <div
             id="savesList"
             style="display: block; width: 100%; overflow-y: auto"
@@ -156,10 +157,12 @@
 
         <span id="playerName"></span>
 
-        <div style="display: inline-flex; align-items: center; gap: 4px">
+        <div
+          id="libraryClipSelectContainer"
+          style="display: none; align-items: center; gap: 4px"
+        >
           <span id="clipLabel" style="cursor: inherit">📚</span>
-          <select id="clipSelect"></select>
-          <select id="libraryClipSelect" style="display: none"></select>
+          <select id="libraryClipSelect"></select>
         </div>
 
         <button id="deleteClipButton" style="display: none">❌</button>
@@ -237,6 +240,10 @@
 
         const renderButton = document.getElementById("renderButton");
         const goToRender = document.getElementById("goToRender");
+
+        const libraryClipSelectContainer = document.getElementById(
+          "libraryClipSelectContainer"
+        );
 
         const clipSelect = document.getElementById("clipSelect");
         const playersList = document.getElementById("playersList");
@@ -392,14 +399,11 @@
             (state.clipSaves && state.clipSaves[state.video.id]) || [];
           if (!saves.length) {
             savesList.innerHTML = `
-            <span style="font-weight:bold">${state.video.id}</span>
             <em>Aucune sauvegarde de sous-titres</em>`;
             return;
-          } else {
-            savesList.innerHTML = `<span style="font-weight:bold">${state.video.id}</span>`;
           }
 
-          savesList.innerHTML += saves
+          savesList.innerHTML = saves
             .map((s, index) => {
               return `
         <div class="saveItem" style="display:flex; justify-content:space-between; align-items:center;">
@@ -472,16 +476,13 @@
             libraryVideo.src = libraryVideosById[librarySelect.value].path;
           }
 
-          libraryClipSelect.style.display =
-            id === "libraryView" ? "block" : "none";
+          libraryClipSelectContainer.style.display =
+            id === "libraryView" ? "inline-flex" : "none";
 
           deleteClipButton.style.display =
             id === "libraryView" ? "block" : "none";
 
           submitButton.style.display = id === "playerView" ? "block" : "none";
-
-          clipSelect.style.display =
-            id === "playerView" || id === "remoteView" ? "block" : "none";
 
           renderButton.style.display = id === "remoteView" ? "block" : "none";
           goToRender.style.display = id === "remoteView" ? "block" : "none";
@@ -498,8 +499,8 @@
           saveNameInput.style.display = !isRemoteVisible ? "none" : "block";
           emoticonActionMenu.style.display = isRemoteVisible ? "block" : "none";
           gameVideo.controls = !isRemoteVisible;
-          gameVideo.pause();
 
+          gameVideo.pause();
           libraryVideo.pause();
 
           requestAnimationFrame(() => updateHeight());
@@ -589,14 +590,33 @@
             .forEach((el) => (el.style.display = "flex"));
         }
 
+        let scrollTimeout = null;
+
         function scrollToSub(i, duration = 0, smooth = true) {
-          const callback = () =>
-            document.getElementById(`sub-${i}`)?.scrollIntoView({
+          const target = document.getElementById(`sub-${i}`);
+          if (!target) return;
+
+          // Annule un scroll précédent si actif
+          if (scrollTimeout) {
+            clearTimeout(scrollTimeout);
+            scrollTimeout = null;
+          }
+
+          const doScroll = () => {
+            target.scrollIntoView({
               behavior: smooth ? "smooth" : "instant",
               block: "end",
             });
-          if (duration === 0) callback();
-          setTimeout(callback, duration);
+          };
+
+          if (duration === 0) {
+            doScroll();
+          } else {
+            scrollTimeout = setTimeout(() => {
+              doScroll();
+              scrollTimeout = null;
+            }, duration);
+          }
         }
 
         window.updateSubtitle = (i, text) => {
@@ -639,7 +659,7 @@
             gameVideo.pause();
             videoStateButton.textContent = "▶️";
           }
-          console.log("paused from state");
+          console.log("update gameVideo from state");
         };
 
         /* ================= REMOTE VIDEO ================= */

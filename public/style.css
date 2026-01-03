@@ -77,13 +77,14 @@ input {
   position: absolute;
   z-index: 9999;
   display: block;
-  font-size: xx-large;
+  font-size: 80px;
 }
 
 #viewInfo {
   position: absolute;
   top: 0;
   right: 0;
+  font-size: 50px !important;
 }
 
 video {
