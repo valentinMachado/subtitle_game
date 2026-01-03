@@ -552,7 +552,7 @@ io.on("connection", (socket) => {
     gameState.video.playerSelected = false;
   });
 
-  socket.on("pause", () => {
+  socket.on("videoStateButtonClicked", () => {
     gameState.video.playing = !gameState.video.playing;
     gameState.video.paused = true;
 

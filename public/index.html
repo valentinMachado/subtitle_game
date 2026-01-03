@@ -44,7 +44,7 @@
           "
         >
           <div style="display: flex; justify-content: space-between">
-            <button id="pauseButton">⏸</button>
+            <button id="videoStateButton">🔄</button>
             <input
               id="saveNameInput"
               placeholder="Nom de la sauvegarde"
@@ -220,6 +220,8 @@
         const saveButton = document.getElementById("saveButton");
         const saveNameInput = document.getElementById("saveNameInput");
 
+        const videoStateButton = document.getElementById("videoStateButton");
+
         const emoticonActionMenu =
           document.getElementById("emoticonActionMenu");
 
@@ -389,11 +391,15 @@
           const saves =
             (state.clipSaves && state.clipSaves[state.video.id]) || [];
           if (!saves.length) {
-            savesList.innerHTML = "<em>Aucun sous-titre pour ce clip</em>";
+            savesList.innerHTML = `
+            <span style="font-weight:bold">${state.video.id}</span>
+            <em>Aucune sauvegarde de sous-titres</em>`;
             return;
+          } else {
+            savesList.innerHTML = `<span style="font-weight:bold">${state.video.id}</span>`;
           }
 
-          savesList.innerHTML = saves
+          savesList.innerHTML += saves
             .map((s, index) => {
               return `
         <div class="saveItem" style="display:flex; justify-content:space-between; align-items:center;">
@@ -401,7 +407,7 @@
           <div>
             <button onclick="loadSave(${index})">✍</button>
             <button onclick="deleteSave(${index})">❌</button>
-            <button onclick="selectClipToInsert('${state.video.id}', ${index})">➕</button>
+            <button onclick="selectClipToInsert('${state.video.id}', ${index})">🕔</button>
           </div>
         </div>
       `;
@@ -622,42 +628,72 @@
           setTimeout(() => (submitButton.textContent = "📄"), 1000);
         };
 
+        const updateVideoState = async (videoState) => {
+          if (videoState.playing) {
+            gameVideo.currentTime = videoState.time;
+            try {
+              await gameVideo.play();
+            } catch {}
+            videoStateButton.textContent = "⏸️";
+          } else {
+            gameVideo.pause();
+            videoStateButton.textContent = "▶️";
+          }
+          console.log("paused from state");
+        };
+
         /* ================= REMOTE VIDEO ================= */
         async function applyRemoteVideoState(videoState, videoCfg) {
           if (lastAppliedVideoState.id !== videoState.id) {
             applyingRemoteChange = true;
-            gameVideo.src = videoCfg.path;
+
+            videoStateButton.textContent = "🔄";
+            lastAppliedVideoState.id = videoState.id;
+
+            if (gameVideo.src !== videoCfg.path) {
+              gameVideo.src = videoCfg.path;
+            }
+
+            await new Promise((resolve) => {
+              if (gameVideo.readyState >= 2) {
+                // déjà prêt
+                resolve();
+              } else {
+                gameVideo.addEventListener("loadedmetadata", resolve, {
+                  once: true,
+                });
+              }
+            });
+
+            await updateVideoState(videoState);
+
             applyingRemoteChange = false;
           }
 
+          // Gestion playerSelected
           if (videoState.playerSelected) {
             applyingRemoteChange = true;
             gameVideo.currentTime = 0;
-            gameVideo.play();
-            console.log("play from state");
+            await updateVideoState(videoState);
+
             applyingRemoteChange = false;
           }
 
+          // Pause / resume
           if (videoState.paused) {
             applyingRemoteChange = true;
+            await updateVideoState(videoState);
 
-            if (videoState.playing) {
-              gameVideo.currentTime = videoState.time;
-              gameVideo.play();
-            } else {
-              gameVideo.pause();
-            }
-            console.log("pause from state");
-
-            applyingRemoteChange = false;
+            applyingRemoteChange = false; // TODO remove this flag ?
           }
 
-          // Synchronisation vidéo
+          // Sync temps
           if (Math.abs(gameVideo.currentTime - videoState.time) > 1) {
             applyingRemoteChange = true;
             gameVideo.currentTime = videoState.time;
             applyingRemoteChange = false;
           }
+
           lastAppliedVideoState = { ...videoState };
         }
 
@@ -862,9 +898,8 @@
             !state?.selectedPlayerId ||
             !state.players[state.selectedPlayerId]?.submitted;
 
-          await applyRemoteVideoState(state.video, videoCfg);
+          applyRemoteVideoState(state.video, videoCfg);
           renderPlayers(state);
-          const videoState = state.video;
         });
 
         const playerState = () => {
@@ -1226,8 +1261,8 @@
         });
 
         // pause button
-        document.getElementById("pauseButton").onclick = () => {
-          socket.emit("pause");
+        videoStateButton.onclick = () => {
+          socket.emit("videoStateButtonClicked");
         };
 
         // init from cache

@@ -478,7 +478,7 @@
           {
             "start": 40.659000000000106,
             "end": 45.36400000000003,
-            "placeholder": "Mais oui tout d'abord clique sur le bouton ➕"
+            "placeholder": "Mais oui tout d'abord clique sur le bouton 🕔"
           },
           {
             "start": 45.57499999999982,
@@ -493,17 +493,17 @@
           {
             "start": 52.70100000000002,
             "end": 56.48199999999997,
-            "placeholder": "Bon je viens de cliquer sur ➕, ca a rajouté le clip à la 🕔 !"
+            "placeholder": "Bon je viens de cliquer sur 🕔, ca a rajouté le clip à la timeline !"
           },
           {
             "start": 56.70100000000002,
             "end": 61.07400000000007,
-            "placeholder": "Tu peux rajouter différents clips 📚 sous-titrés ici"
+            "placeholder": "Tu peux rajouter différents clips 📚 sous-titrés ici 🕔"
           },
           {
             "start": 62.70100000000002,
             "end": 64.9050000000002,
-            "placeholder": "Pareil ❌ le supprime de la 🕔"
+            "placeholder": "Pareil ❌ le supprime"
           },
           {
             "start": 65.57499999999982,
