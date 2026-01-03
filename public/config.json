@@ -387,6 +387,105 @@
       ],
       "startTime": "00:28:00",
       "endTime": "00:30:48"
+    },
+    {
+      "id": "banane",
+      "lang": "en",
+      "path": "videos/banane.mp4",
+      "subtitles": [
+        {
+          "start": 0,
+          "end": 2.4189999999999827,
+          "placeholder": "1: ♪"
+        },
+        {
+          "start": 2.453999999999951,
+          "end": 5.111999999999966,
+          "placeholder": "2: Notches full of dust,"
+        },
+        {
+          "start": 5.145999999999958,
+          "end": 6.907000000000039,
+          "placeholder": "3: if you can get it hot enough."
+        },
+        {
+          "start": 6.941000000000031,
+          "end": 10.323999999999955,
+          "placeholder": "4: [thunder rumbling]"
+        },
+        {
+          "start": 10.357999999999947,
+          "end": 13.188999999999965,
+          "placeholder": "5: And the wind is picking up\nand blowing my ember apart."
+        },
+        {
+          "start": 13.222999999999956,
+          "end": 14.811000000000035,
+          "placeholder": "6: ♪"
+        },
+        {
+          "start": 14.845000000000027,
+          "end": 17.53800000000001,
+          "placeholder": "7: The sun has gone\nbehind the hills."
+        },
+        {
+          "start": 17.572000000000003,
+          "end": 22.301000000000045,
+          "placeholder": "8: ♪"
+        },
+        {
+          "start": 22.336000000000013,
+          "end": 24.821000000000026,
+          "placeholder": "9: Hmm."
+        },
+        {
+          "start": 24.855000000000018,
+          "end": 28.618000000000052,
+          "placeholder": "10: Just does not keep smoking."
+        },
+        {
+          "start": 28.652000000000044,
+          "end": 30.515999999999963,
+          "placeholder": "11: ♪"
+        },
+        {
+          "start": 30.551000000000045,
+          "end": 31.897000000000048,
+          "placeholder": "12: What's the deal?"
+        },
+        {
+          "start": 31.932000000000016,
+          "end": 35.14200000000005,
+          "placeholder": "13: ♪"
+        },
+        {
+          "start": 35.176000000000045,
+          "end": 37.90300000000002,
+          "placeholder": "14: That is a disappointment."
+        },
+        {
+          "start": 37.93799999999999,
+          "end": 39.870000000000005,
+          "placeholder": "15: I might just call it a day"
+        },
+        {
+          "start": 39.90499999999997,
+          "end": 41.90700000000004,
+          "placeholder": "16: and not plan on\nhaving a fire tonight,"
+        },
+        {
+          "start": 41.94200000000001,
+          "end": 45.98000000000002,
+          "placeholder": "17: ♪"
+        },
+        {
+          "start": 46.014999999999986,
+          "end": 47,
+          "placeholder": "18: That's super disappointing."
+        }
+      ],
+      "startTime": "00:15:01",
+      "endTime": "00:15:48"
     }
   ],
   "template-1": {
@@ -769,11 +868,10 @@
       "srt": "./library_videos/seller_of_dreams/seller_of_dreams_ru.srt"
     },
     {
-      "id": "the_new_adventures_of_captain_wrongel",
-      "lang": "ru",
-      "url": "https://www.youtube.com/watch?v=FgS-ejszO3Q",
-      "path": "./library_videos/the_new_adventures_of_captain_wrongel/the_new_adventures_of_captain_wrongel.mp4",
-      "srt": "./library_videos/the_new_adventures_of_captain_wrongel/the_new_adventures_of_captain_wrongel_ru.srt"
+      "id": "film_1",
+      "lang": "en",
+      "path": "./library_videos/film_1/film_1.mp4",
+      "srt": "./library_videos/film_1/film_1_en.srt"
     }
   ]
 }

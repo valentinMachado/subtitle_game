@@ -142,5 +142,4 @@ vite.config.ts.timestamp-*
 /public/videos/
 /public/library_videos/
 /public/render/
-dl_video.js
-
+cookies.txt
