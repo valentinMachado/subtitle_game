@@ -77,17 +77,21 @@ const loadVideoId = async (id) => {
     gameState.video.duration = 0;
   }
 
-  Object.values(gameState.players).forEach((p) => {
-    p.submitted = false;
-    p.submitHasBeenPlayed = true;
-
-    p.subtitles =
-      config[gameState.video.id]?.players[p.id]?.subtitles ||
-      config.videos[gameState.video.index].subtitles;
-  });
-
   currentTemplatePlayerIds.forEach(([id]) => {
     delete gameState.players[id];
+  });
+
+  Object.values(gameState.players).forEach((p) => {
+    p.submitted = false;
+    p.submitHasBeenPlayed = false;
+
+    p.subtitles = isTemplate(gameState.video.id)
+      ? config[gameState.video.id].defaultSubtitles
+      : config.videos[gameState.video.index].subtitles;
+
+    if (p.subtitles.length === 0) {
+      console.warn(`⚠️ Video "${gameState.video.id}" sans sous-titres`);
+    }
   });
 
   if (isTemplate(gameState.video.id) && config[gameState.video.id]) {
@@ -416,11 +420,14 @@ io.on("connection", (socket) => {
           : config.videos[gameState.video.index].subtitles,
       };
 
-      console.log(playerName, " connected", gameState.players[playerId]);
+      if (gameState.players[playerId].subtitles.length === 0) {
+        console.warn(`⚠️ Video "${gameState.video.id}" sans sous-titres`);
+      }
+
+      console.log(playerName, " connected");
     }
 
-    socket.emit("gameState", gameState);
-    socket.broadcast.emit("gameState", gameState);
+    io.emit("gameState", gameState);
   });
 
   socket.on("needGameState", () => {

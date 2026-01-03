@@ -617,13 +617,6 @@
       "url": "https://www.youtube.com/watch?v=FgS-ejszO3Q",
       "path": "./library_videos/seller_of_dreams/seller_of_dreams.mp4",
       "srt": "./library_videos/seller_of_dreams/seller_of_dreams_ru.srt"
-    },
-    {
-      "id": "discours_elisabeth_II",
-      "lang": "en",
-      "url": "https://www.youtube.com/watch?v=2klmuggOElE",
-      "path": "./library_videos/discours_elisabeth_II/discours_elisabeth_II.mp4",
-      "srt": "./library_videos/discours_elisabeth_II/discours_elisabeth_II_en.srt"
     }
   ]
 }

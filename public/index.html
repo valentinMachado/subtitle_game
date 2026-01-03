@@ -317,10 +317,10 @@
         function loadLocalVideo(state, videoCfg) {
           gameVideo.src = videoCfg.path;
           gameVideo.load();
-          const cached = localStorage.getItem(`subs_${videoCfg.id}`);
-
           playerSubtitles = null;
+        }
 
+        function initPlayerSubtitles(state, videoCfg) {
           for (let key in state.players) {
             if (playerName === state.players[key].name) {
               playerSubtitles = state.players[key].subtitles;
@@ -328,6 +328,9 @@
             }
           }
 
+          if (!playerSubtitles) return; // player is not in the state yet
+
+          const cached = localStorage.getItem(`subs_${videoCfg.id}`);
           if (cached) {
             const subtitlesCached = JSON.parse(cached);
             playerSubtitles = playerSubtitles.map((s, index) => {
@@ -755,6 +758,8 @@
             loadLocalVideo(state, videoCfg);
           }
 
+          if (!playerSubtitles) initPlayerSubtitles(state, videoCfg);
+
           renderClipSelect(state.video.id);
 
           if (currentViewId == "playerView" && state.receivedSubtitles) {
@@ -871,7 +876,9 @@
                   p.submitted ? "📄" : "❌"
                 }</span>
                                   </span><span>${
-                                    p.submitHasBeenPlayed ? "" : "👋"
+                                    !p.submitHasBeenPlayed && p.submitted
+                                      ? "👋"
+                                      : ""
                                   }</span><span>${p.name}</span>
 
                                     </div>`
