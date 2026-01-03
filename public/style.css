@@ -32,6 +32,10 @@ button:disabled {
   cursor: not-allowed;
 }
 
+select {
+  font-size: 30px;
+}
+
 input {
   padding: 14px;
   font-size: 16px;

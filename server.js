@@ -41,9 +41,10 @@ const gameState = {
 };
 
 const app = express();
-const server = app.listen(3000, () =>
-  console.log("Serveur démarré sur http://localhost:3000")
-);
+
+const server = app.listen(3000, "0.0.0.0", () => {
+  console.log("Serveur démarré sur http://0.0.0.0:3000");
+});
 const io = socketio(server);
 
 // ---------- CONFIG ----------

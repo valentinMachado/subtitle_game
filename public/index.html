@@ -156,7 +156,7 @@
 
         <div style="display: inline-flex; align-items: center; gap: 4px">
           <span id="clipLabel" style="cursor: inherit">📚</span>
-          <select id="clipSelect" style="width: 150px"></select>
+          <select id="clipSelect"></select>
           <select id="libraryClipSelect" style="display: none"></select>
         </div>
 
@@ -408,6 +408,7 @@
         }
 
         const renderLocalOverlay = () => {
+          if (currentViewId !== "playerView") return;
           const t = gameVideo.currentTime;
           const active = playerSubtitles.find(
             (s) => t >= s.start && t <= s.end
@@ -1068,10 +1069,7 @@
           }
         });
 
-        let isCreatingClip = false;
         createBtn.addEventListener("click", () => {
-          if (isCreatingClip) return;
-
           // 1. Validation HTML native
           if (!startInput.checkValidity() || !endInput.checkValidity()) {
             // Force l’affichage du message du navigateur
@@ -1120,7 +1118,7 @@
           // 5. Utilisation finale
           createBtn.textContent = "⌛";
 
-          isCreatingClip = true;
+          createBtn.disabled = true;
 
           socket.emit("createClip", {
             libraryVideoId: librarySelect.value,
@@ -1213,6 +1211,7 @@
           .replace(/^-+|-+$/g, ""); // trim des "-"
       }
 
+      // localStorage.clear();
       main();
     </script>
   </body>

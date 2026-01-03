@@ -148,95 +148,6 @@
           "placeholder": "11 Повернись к лесу передом, к Ивану задом."
         }
       ]
-    },
-    {
-      "id": "bonne-annee",
-      "lang": "ru",
-      "path": "videos/bonne-annee.mp4",
-      "subtitles": [
-        {
-          "start": 0,
-          "end": 0.14400000000000546,
-          "placeholder": "1: Вы вспомните, как мы жили прежде\nи как живём теперь."
-        },
-        {
-          "start": 0.8999999999999773,
-          "end": 3.23599999999999,
-          "placeholder": "2: Какие сны мы видели раньше. Ужас."
-        },
-        {
-          "start": 4.1860000000000355,
-          "end": 5.638000000000034,
-          "placeholder": "3: Мрак, кошмар."
-        },
-        {
-          "start": 5.868000000000052,
-          "end": 7.826999999999998,
-          "placeholder": "4: Что было страшнее тех сновидений,"
-        },
-        {
-          "start": 8.206999999999994,
-          "end": 10.616999999999962,
-          "placeholder": "5: когда богатырь видел себя\nхилым недомерком."
-        },
-        {
-          "start": 11.706999999999994,
-          "end": 13.664999999999964,
-          "placeholder": "6: Когда зрячий видел себя слепым."
-        },
-        {
-          "start": 13.878000000000043,
-          "end": 16.456000000000017,
-          "placeholder": "7: А дитя сиротой, ищущей свою бедную мать."
-        },
-        {
-          "start": 16.528999999999996,
-          "end": 19.049999999999955,
-          "placeholder": "8: - Вы это помните?\n- Помним, помним."
-        },
-        {
-          "start": 20.109000000000037,
-          "end": 24.355000000000018,
-          "placeholder": "9: А что даруется нам сейчас добротой\nнашей прекрасной правительницы?"
-        },
-        {
-          "start": 24.64300000000003,
-          "end": 27.08299999999997,
-          "placeholder": "10: Только благодаря её неустанным заботам."
-        },
-        {
-          "start": 27.461000000000013,
-          "end": 30.034999999999968,
-          "placeholder": "11: Слепой видит себя во сне зрячим."
-        },
-        {
-          "start": 30.726999999999975,
-          "end": 32.697,
-          "placeholder": "12: Калека видит себя во сне богатырём."
-        },
-        {
-          "start": 33.36099999999999,
-          "end": 36.32000000000005,
-          "placeholder": "13: А голодный видит себя во сне сытым."
-        },
-        {
-          "start": 36.89499999999998,
-          "end": 39.222999999999956,
-          "placeholder": "14: И всё это совершенно бескорыстно."
-        },
-        {
-          "start": 39.940000000000055,
-          "end": 45.46199999999999,
-          "placeholder": "15: Нам жалует наша прекрасная,\nтрудолюбивая правительница Джок."
-        },
-        {
-          "start": 45.764999999999986,
-          "end": 47,
-          "placeholder": "16: - Да при чём тут она?\n- То есть как это при чём?"
-        }
-      ],
-      "startTime": "00:15:01",
-      "endTime": "00:15:48"
     }
   ],
   "template-1": {
@@ -617,6 +528,13 @@
       "url": "https://www.youtube.com/watch?v=FgS-ejszO3Q",
       "path": "./library_videos/seller_of_dreams/seller_of_dreams.mp4",
       "srt": "./library_videos/seller_of_dreams/seller_of_dreams_ru.srt"
+    },
+    {
+      "id": "the_new_adventures_of_captain_wrongel",
+      "lang": "ru",
+      "url": "https://www.youtube.com/watch?v=FgS-ejszO3Q",
+      "path": "./library_videos/the_new_adventures_of_captain_wrongel/the_new_adventures_of_captain_wrongel.mp4",
+      "srt": "./library_videos/the_new_adventures_of_captain_wrongel/the_new_adventures_of_captain_wrongel_ru.srt"
     }
   ]
 }
