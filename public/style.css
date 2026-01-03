@@ -115,10 +115,15 @@ video {
   gap: 6px;
   background: white;
   border-radius: 6px;
-  padding: 2px 15px 2px 0px;
   margin-bottom: 8px;
   border-left: 4px solid transparent;
   cursor: pointer;
+}
+
+.subtitleText {
+  display: flex;
+  width: 100%;
+  padding: 0px 30px 30px 0px;
 }
 
 .subtitleItem.active {
@@ -127,7 +132,7 @@ video {
 }
 
 .subtitleTime {
-  font-size: 0.75rem;
+  font-size: x-small;
   color: #666;
   flex-shrink: 0;
 }
@@ -139,9 +144,8 @@ video {
 
 .seekButton {
   width: 50px;
-  min-height: 30px;
+  height: 100%;
   font-size: 0.75rem;
-  padding: 5px 8px;
 }
 
 /* ===== REMOTE VIEW ===== */

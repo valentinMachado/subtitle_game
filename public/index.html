@@ -432,7 +432,8 @@
                                     <button class="seekButton" onclick="seekTo(${
                                       s.start
                                     })">▶</button>
-                                  <span class="subtitleTime">${stripHours(
+                                 <div class="subtitleText">
+                                    <span class="subtitleTime">${stripHours(
                                     fmt(s.start)
                                   )} - ${stripHours(fmt(s.end))}</span>
                                   <input class="subtitleInput"
@@ -441,6 +442,7 @@
                                     onfocus="focusSubtitle(${i})"
                                     onblur="stopEditing()"
                                     oninput="updateSubtitle(${i}, this.value)">
+                                    </div>
                                 </div>`
             )
             .join("");
