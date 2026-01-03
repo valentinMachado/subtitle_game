@@ -29,14 +29,16 @@ const gameState = {
     index: 0,
     duration: 0,
     time: 0,
-    playing: false,
+    // event
+    playerSelected: false,
   },
   players: {},
   emoticons: {},
   clipSaves: {},
   timeline: [],
   renderUrl: null,
-  finishRender: false,
+  // events
+  finishedRender: false,
   receivedSubtitles: false,
 };
 
@@ -118,75 +120,6 @@ const loadVideoId = async (id) => {
 
 let config = loadConfig();
 loadVideoId("template-1");
-
-const mapUUIDCancelled = new Map();
-let currentVideoEndPromiseUUID = null;
-const createVideoEndPromise = () => {
-  const duration = gameState.video.duration;
-  const time = gameState.video.time;
-  const promiseDuration = duration * 1000 - time * 10000;
-
-  const uuid = crypto.randomUUID();
-
-  console.log(
-    "Création de la promesse de fin de vidéo:",
-    promiseDuration,
-    duration,
-    time,
-    uuid
-  );
-
-  const interval = setInterval(() => {
-    if (mapUUIDCancelled.get(uuid)) {
-      clearInterval(interval);
-      return;
-    }
-
-    gameState.video.time = Math.min(
-      gameState.video.duration,
-      gameState.video.time + 0.1
-    );
-  }, 100);
-
-  const promise = new Promise((resolve) => {
-    setTimeout(() => {
-      resolve(uuid);
-      clearInterval(interval);
-      console.log("Promesse terminée");
-    }, promiseDuration);
-  });
-
-  mapUUIDCancelled.set(uuid, false);
-  currentVideoEndPromiseUUID = uuid;
-
-  promise.then((pUUID) => {
-    if (mapUUIDCancelled.get(pUUID)) {
-      console.log("Annulée", pUUID);
-      delete mapUUIDCancelled.get(pUUID);
-      return;
-    }
-    console.log("Non annulée", pUUID);
-
-    // gameState.video.playing = false; TODO un event state qui declenche le play au selectPlayerId
-
-    delete mapUUIDCancelled.get(pUUID);
-
-    currentVideoEndPromiseUUID = null;
-
-    io.emit("gameState", gameState);
-  });
-};
-
-const cancelVideoEndPromise = () => {
-  if (currentVideoEndPromiseUUID) {
-    console.log(
-      "Annulation de la promesse de fin de vidéo",
-      currentVideoEndPromiseUUID
-    );
-    mapUUIDCancelled.set(currentVideoEndPromiseUUID, true);
-    currentVideoEndPromiseUUID = null;
-  }
-};
 
 // ---------- STATIC FILES ----------
 
@@ -380,11 +313,11 @@ const render = async () => {
     );
 
     gameState.renderUrl = finalOutput;
-    gameState.finishRender = true;
+    gameState.finishedRender = true;
 
     io.emit("gameState", gameState);
 
-    gameState.finishRender = false;
+    gameState.finishedRender = false;
     isRendering = false;
 
     // Cleanup
@@ -601,14 +534,14 @@ io.on("connection", (socket) => {
       return;
     }
 
-    cancelVideoEndPromise();
-
     player.submitHasBeenPlayed = true;
-    console.log(player.name, "selected");
     gameState.video.playing = true;
     gameState.video.time = 0;
-    createVideoEndPromise();
+
+    gameState.video.playerSelected = true;
+    console.log(player.name, gameState);
     io.emit("gameState", gameState);
+    // gameState.playerSelected = false;
   });
 
   // ----- Disconnect -----

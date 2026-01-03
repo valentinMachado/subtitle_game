@@ -622,16 +622,13 @@
             applyingRemoteChange = false;
           }
 
-          if (videoState.playing && gameVideo.paused) {
+          if (videoState.playerSelected) {
             applyingRemoteChange = true;
-            gameVideo.play().catch(() => {});
+            gameVideo.play();
             applyingRemoteChange = false;
           }
-          if (!videoState.playing && !gameVideo.paused) {
-            applyingRemoteChange = true;
-            gameVideo.pause();
-            applyingRemoteChange = false;
-          }
+
+          // Synchronisation vidéo
           if (Math.abs(gameVideo.currentTime - videoState.time) > 1) {
             applyingRemoteChange = true;
             gameVideo.currentTime = videoState.time;
@@ -776,7 +773,7 @@
 
           renderButton.disabled = state.timeline.length === 0;
           goToRender.disabled = !state.renderUrl;
-          if (state.finishRender) {
+          if (state.finishedRender) {
             goToRender.classList.remove("pulse-once"); // reset au cas où
             void goToRender.offsetWidth; // force reflow
             goToRender.classList.add("pulse-once");
@@ -839,16 +836,6 @@
           await applyRemoteVideoState(state.video, videoCfg);
           renderPlayers(state);
           const videoState = state.video;
-
-          // Synchronisation vidéo
-          if (Math.abs(gameVideo.currentTime - videoState.time) > 1) {
-            applyingRemoteChange = true;
-            gameVideo.currentTime = videoState.time;
-            applyingRemoteChange = false;
-          }
-
-          if (videoState.playing && gameVideo.paused) gameVideo.play();
-          if (!videoState.playing && !gameVideo.paused) gameVideo.pause();
         });
 
         const playerState = () => {
@@ -1135,6 +1122,21 @@
           localStorage.setItem("playerName", "");
           window.location.reload();
         };
+
+        /* ================= KEYBOARD ================= */
+        window.addEventListener("keydown", (e) => {
+          if (e.key === "f" || e.key === "F") {
+            if (!document.fullscreenElement) {
+              videoContainer.requestFullscreen();
+            } else {
+              document.exitFullscreen();
+            }
+          }
+
+          if (e.key === "Escape" && document.fullscreenElement) {
+            document.exitFullscreen();
+          }
+        });
 
         /* ================= ACTION MENU ================= */
         document.querySelectorAll(".action-menu").forEach((menu) => {
