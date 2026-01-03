@@ -97,25 +97,29 @@
         <select id="librarySelect"></select>
 
         <div class="libraryEditor">
-          <label for="startClipInput">Début (hh:mm:ss)</label>
-          <input
-            id="startClipInput"
-            type="text"
-            required
-            placeholder="00:00:00"
-            pattern="^([0-1]\d|2[0-3]):([0-5]\d):([0-5]\d)$"
-            title="Format attendu : hh:mm:ss"
-          />
+          <div>
+            <label for="startClipInput">⏲</label>
+            <input
+              id="startClipInput"
+              type="text"
+              required
+              placeholder="00:00:00"
+              pattern="^([0-1]\d|2[0-3]):([0-5]\d):([0-5]\d)$"
+              title="Format attendu : hh:mm:ss"
+            />
+          </div>
 
-          <label for="endClipInput">Fin (hh:mm:ss)</label>
-          <input
-            id="endClipInput"
-            type="text"
-            required
-            placeholder="00:00:00"
-            pattern="^([0-1]\d|2[0-3]):([0-5]\d):([0-5]\d)$"
-            title="Format attendu : hh:mm:ss"
-          />
+          <div>
+            <label for="endClipInput">⏲</label>
+            <input
+              id="endClipInput"
+              type="text"
+              required
+              placeholder="00:00:00"
+              pattern="^([0-1]\d|2[0-3]):([0-5]\d):([0-5]\d)$"
+              title="Format attendu : hh:mm:ss"
+            />
+          </div>
 
           <input
             id="clipName"
@@ -903,13 +907,31 @@
         function renderLibraryView() {
           librarySelect.innerHTML = "";
 
-          Object.values(libraryVideosById)
-            .sort((a, b) => a.id.toString().localeCompare(b.id.toString()))
-            .forEach((v) => {
-              const option = document.createElement("option");
-              option.value = v.id;
-              option.textContent = `${v.id} (${v.lang})`;
-              librarySelect.appendChild(option);
+          // Regrouper les vidéos par langue
+          const videosByLang = {};
+          Object.values(libraryVideosById).forEach((v) => {
+            if (!videosByLang[v.lang]) videosByLang[v.lang] = [];
+            videosByLang[v.lang].push(v);
+          });
+
+          // Créer les optgroup
+          Object.keys(videosByLang)
+            .sort() // trier les langues par ordre alphabétique
+            .forEach((lang) => {
+              const optgroup = document.createElement("optgroup");
+              optgroup.label = lang;
+
+              // trier les vidéos par id dans chaque langue
+              videosByLang[lang]
+                .sort((a, b) => a.id.toString().localeCompare(b.id.toString()))
+                .forEach((v) => {
+                  const option = document.createElement("option");
+                  option.value = v.id;
+                  option.textContent = `${v.id}`;
+                  optgroup.appendChild(option);
+                });
+
+              librarySelect.appendChild(optgroup);
             });
 
           libraryClipSelect.innerHTML = "";
@@ -1037,9 +1059,8 @@
           if (!Number.isFinite(endSec)) return;
 
           // Si le temps courant dépasse la fin, pause la vidéo
-          if (libraryVideo.currentTime >= endSec) {
+          if (libraryVideo.currentTime >= endSec + 5 && !libraryVideo.paused) {
             libraryVideo.pause();
-            libraryVideo.currentTime = endSec; // optionnel : ajuste exactement à la fin
           }
         });
 

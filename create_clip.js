@@ -46,7 +46,7 @@ function parseSRT(srtContent) {
         entries.push({
           start,
           end,
-          placeholder: lines.slice(2).join(" "),
+          placeholder: lines.slice(2).join("\n"),
         });
       }
     }
@@ -72,10 +72,11 @@ function clipSubtitles(subtitles, clipStart, clipEnd) {
  * Récupère les sous-titres découpés pour le clip
  */
 function getClipSubtitles() {
-  const srtPath = `./public/library_videos/${libraryVideoId}.srt`;
+  const srtPath = `./public/library_videos/${libraryVideoId}/${libraryVideoId}_${lang}.srt`;
   if (!fs.existsSync(srtPath)) return [];
 
   const srtContent = fs.readFileSync(srtPath, "utf-8");
+  console.log("SRT content preview:\n", srtContent.slice(0, 300));
   const subtitles = parseSRT(srtContent);
   return clipSubtitles(subtitles, parseTime(startTime), parseTime(endTime));
 }
@@ -174,7 +175,7 @@ const main = async () => {
 
   try {
     const output = await processVideo(
-      `./public/library_videos/${libraryVideoId}.mp4`,
+      `./public/library_videos/${libraryVideoId}/${libraryVideoId}.mp4`,
       `./public/videos/${clipId}.mp4`,
       {
         startTime: startTime,
