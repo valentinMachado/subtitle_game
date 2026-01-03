@@ -328,17 +328,12 @@
             }
           }
 
-          if (!playerSubtitles) playerSubtitles = videoCfg.subtitles;
-
           if (cached) {
             const subtitlesCached = JSON.parse(cached);
             playerSubtitles = playerSubtitles.map((s, index) => {
               return {
                 ...s,
-                text:
-                  subtitlesCached[index] && subtitlesCached[index].text != ""
-                    ? subtitlesCached[index].text
-                    : "",
+                text: subtitlesCached[index] ? subtitlesCached[index].text : "",
               };
             });
           }
@@ -569,7 +564,9 @@
         function hideOtherSubtitles(i) {
           document
             .querySelectorAll(".subtitleItem")
-            .forEach((el, j) => (el.style.display = j >= i ? "flex" : "none"));
+            .forEach(
+              (el, j) => (el.style.display = j >= i - 1 ? "flex" : "none")
+            );
         }
         function showAllSubtitles() {
           document

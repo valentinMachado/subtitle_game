@@ -416,7 +416,7 @@ io.on("connection", (socket) => {
           : config.videos[gameState.video.index].subtitles,
       };
 
-      console.log(playerName, " connected");
+      console.log(playerName, " connected", gameState.players[playerId]);
     }
 
     socket.emit("gameState", gameState);
