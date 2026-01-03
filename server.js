@@ -93,7 +93,7 @@ const loadVideoId = async (id) => {
 
   Object.values(gameState.players).forEach((p) => {
     p.submitted = false;
-    p.submitHasBeenPlayed = false;
+    p.hasBeenSelected = false;
 
     p.subtitles = isTemplate(gameState.video.id)
       ? config[gameState.video.id].defaultSubtitles
@@ -110,7 +110,7 @@ const loadVideoId = async (id) => {
         const gamePlayer = {
           name: player.name,
           submitted: true,
-          submitHasBeenPlayed: false,
+          hasBeenSelected: false,
           subtitles: player.subtitles,
         };
         gameState.players[id] = gamePlayer;
@@ -355,7 +355,7 @@ io.on("connection", (socket) => {
       gameState.players[playerId] = {
         name: playerName || "Joueur " + Math.floor(Math.random() * 1000),
         submitted: false,
-        submitHasBeenPlayed: true, // wait submission of srt
+        hasBeenSelected: true, // wait submission of srt
         subtitles: isTemplate(gameState.video.id)
           ? config[gameState.video.id].defaultSubtitles
           : config.videos[gameState.video.index].subtitles,
@@ -435,7 +435,7 @@ io.on("connection", (socket) => {
 
     player.submitted = true;
     player.subtitles = subtitles;
-    player.submitHasBeenPlayed = false;
+    player.hasBeenSelected = false;
     console.log(player.name, "submitted subtitles");
 
     gameState.receivedSubtitles = true;
@@ -541,12 +541,8 @@ io.on("connection", (socket) => {
       return;
     }
 
-    player.submitHasBeenPlayed = true;
-    gameState.video.time = 0;
-
+    player.hasBeenSelected = true;
     gameState.video.playerSelected = true;
-    gameState.video.playing = true;
-    console.log(player.name, "selected");
 
     io.emit("gameState", gameState);
     gameState.video.playerSelected = false;
@@ -555,6 +551,15 @@ io.on("connection", (socket) => {
   socket.on("videoStateButtonClicked", () => {
     gameState.video.playing = !gameState.video.playing;
     gameState.video.paused = true;
+
+    io.emit("gameState", gameState);
+    gameState.video.paused = false;
+  });
+
+  socket.on("stopButtonClicked", () => {
+    gameState.video.playing = false;
+    gameState.video.paused = true;
+    gameState.video.time = 0;
 
     io.emit("gameState", gameState);
     gameState.video.paused = false;

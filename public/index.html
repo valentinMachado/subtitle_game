@@ -45,13 +45,16 @@
         >
           <div style="display: flex; justify-content: space-between">
             <button id="videoStateButton">🔄</button>
-            <button id="saveButton" disabled style="display: none">💾</button>
-            <input
-              id="saveNameInput"
-              placeholder="Nom de la sauvegarde"
-              value="sous-titres"
-              style="display: none"
-            />
+            <button id="stopButton">⏹️</button>
+            <div style="display: inline-flex; align-items: center; gap: 4px">
+              <input
+                id="saveNameInput"
+                placeholder="Nom de la sauvegarde"
+                value="sous-titres"
+                style="display: none; max-width: 50%"
+              />
+              <button id="saveButton" disabled style="display: none">💾</button>
+            </div>
           </div>
           <div id=""></div>
           <div
@@ -70,7 +73,10 @@
             min-width: 0;
           "
         >
-          <select id="clipSelect"></select>
+          <div>
+            <span id="clipLabel" style="cursor: inherit">📚</span>
+            <select id="clipSelect"></select>
+          </div>
           <div
             id="savesList"
             style="display: block; width: 100%; overflow-y: auto"
@@ -97,7 +103,10 @@
     <!-- ================= LIBRARY VIEW ================= -->
     <div id="libraryView" class="viewContainer" style="display: none">
       <div class="libraryLayout">
-        <select id="librarySelect"></select>
+        <select
+          id="librarySelect"
+          style="font-size: 30px; max-width: 100%"
+        ></select>
 
         <div class="libraryEditor">
           <div>
@@ -131,7 +140,7 @@
             pattern=".*\S.*"
             title="Le nom du clip ne peut pas être vide"
           />
-          <button id="createClip">💾</button>
+          <button id="createClip">📚</button>
         </div>
       </div>
     </div>
@@ -168,31 +177,75 @@
         <button id="deleteClipButton" style="display: none">❌</button>
         <button id="submitButton">📄</button>
 
-        <div id="emoticonActionMenu" class="action-menu" style="display: none">
+        <div id="emoticonActionMenu" style="display: none" class="action-menu">
           <button class="action-menu-toggle">💬</button>
 
           <div class="action-menu-panel">
+            <!-- Colonne 1 : Confusion / neutre / gêné -->
             <button class="action-menu-item" data-action="emoticon">😕</button>
-            <!-- déroutant -->
             <button class="action-menu-item" data-action="emoticon">😐</button>
-            <!-- neutre / moyen -->
             <button class="action-menu-item" data-action="emoticon">😬</button>
-            <!-- maladroit / gênant -->
+            <button class="action-menu-item" data-action="emoticon">🤨</button>
+            <button class="action-menu-item" data-action="emoticon">😶</button>
+            <button class="action-menu-item" data-action="emoticon">🙄</button>
+            <button class="action-menu-item" data-action="emoticon">😮‍💨</button>
+            <button class="action-menu-item" data-action="emoticon">😳</button>
+            <button class="action-menu-item" data-action="emoticon">😏</button>
 
+            <!-- Colonne 2 : Positif / joyeux -->
             <button class="action-menu-item" data-action="emoticon">🙂</button>
-            <!-- agréable -->
+            <button class="action-menu-item" data-action="emoticon">😃</button>
             <button class="action-menu-item" data-action="emoticon">😂</button>
-            <!-- fonctionne très bien -->
+            <button class="action-menu-item" data-action="emoticon">😎</button>
+            <button class="action-menu-item" data-action="emoticon">😄</button>
+            <button class="action-menu-item" data-action="emoticon">😊</button>
+            <button class="action-menu-item" data-action="emoticon">🥳</button>
+            <button class="action-menu-item" data-action="emoticon">😺</button>
+            <button class="action-menu-item" data-action="emoticon">😸</button>
 
+            <!-- Colonne 3 : Négatif / critique / désapprobation -->
             <button class="action-menu-item" data-action="emoticon">❗</button>
-            <!-- choque / faux -->
-            <button class="action-menu-item" data-action="emoticon">❓</button>
-            <!-- pas clair -->
-
-            <button class="action-menu-item" data-action="emoticon">👍</button>
-            <!-- ok -->
+            <button class="action-menu-item" data-action="emoticon">❌</button>
             <button class="action-menu-item" data-action="emoticon">👎</button>
-            <!-- pas ok -->
+            <button class="action-menu-item" data-action="emoticon">😡</button>
+            <button class="action-menu-item" data-action="emoticon">😠</button>
+            <button class="action-menu-item" data-action="emoticon">😰</button>
+            <button class="action-menu-item" data-action="emoticon">😢</button>
+            <button class="action-menu-item" data-action="emoticon">😟</button>
+            <button class="action-menu-item" data-action="emoticon">😥</button>
+
+            <!-- Colonne 4 : Surprise / choc / étonnement -->
+            <button class="action-menu-item" data-action="emoticon">😮</button>
+            <button class="action-menu-item" data-action="emoticon">😲</button>
+            <button class="action-menu-item" data-action="emoticon">😱</button>
+            <button class="action-menu-item" data-action="emoticon">🤯</button>
+            <button class="action-menu-item" data-action="emoticon">😧</button>
+            <button class="action-menu-item" data-action="emoticon">😨</button>
+            <button class="action-menu-item" data-action="emoticon">😦</button>
+            <button class="action-menu-item" data-action="emoticon">😵</button>
+            <button class="action-menu-item" data-action="emoticon">😶‍🌫️</button>
+
+            <!-- Colonne 5 : Amour / affection / positif -->
+            <button class="action-menu-item" data-action="emoticon">😍</button>
+            <button class="action-menu-item" data-action="emoticon">🥰</button>
+            <button class="action-menu-item" data-action="emoticon">😘</button>
+            <button class="action-menu-item" data-action="emoticon">😻</button>
+            <button class="action-menu-item" data-action="emoticon">💖</button>
+            <button class="action-menu-item" data-action="emoticon">💘</button>
+            <button class="action-menu-item" data-action="emoticon">💝</button>
+            <button class="action-menu-item" data-action="emoticon">💞</button>
+            <button class="action-menu-item" data-action="emoticon">💗</button>
+
+            <!-- Colonne 6 : Blague / drôle / espiègle -->
+            <button class="action-menu-item" data-action="emoticon">😜</button>
+            <button class="action-menu-item" data-action="emoticon">😝</button>
+            <button class="action-menu-item" data-action="emoticon">🤪</button>
+            <button class="action-menu-item" data-action="emoticon">😛</button>
+            <button class="action-menu-item" data-action="emoticon">🤭</button>
+            <button class="action-menu-item" data-action="emoticon">😏</button>
+            <button class="action-menu-item" data-action="emoticon">😼</button>
+            <button class="action-menu-item" data-action="emoticon">😹</button>
+            <button class="action-menu-item" data-action="emoticon">😻</button>
           </div>
         </div>
 
@@ -224,6 +277,7 @@
         const saveNameInput = document.getElementById("saveNameInput");
 
         const videoStateButton = document.getElementById("videoStateButton");
+        const stopButton = document.getElementById("stopButton");
 
         const emoticonActionMenu =
           document.getElementById("emoticonActionMenu");
@@ -366,6 +420,10 @@
             .forEach((k) => localStorage.removeItem(k));
         }
 
+        const stripHours = (t) => {
+          const [, mm, rest] = t.split(":");
+          return `${mm}:${rest}`;
+        };
         function renderSubtitles() {
           subtitlesList.innerHTML = playerSubtitles
             .map(
@@ -374,9 +432,9 @@
                                     <button class="seekButton" onclick="seekTo(${
                                       s.start
                                     })">▶</button>
-                                  <span class="subtitleTime">${fmt(
-                                    s.start
-                                  )} - ${fmt(s.end)}</span>
+                                  <span class="subtitleTime">${stripHours(
+                                    fmt(s.start)
+                                  )} - ${stripHours(fmt(s.end))}</span>
                                   <input class="subtitleInput"
                                     value="${s.text ? s.text : ""}"
                                     placeholder="${s.placeholder}"
@@ -648,6 +706,10 @@
           setTimeout(() => (submitButton.textContent = "📄"), 1000);
         };
 
+        stopButton.onclick = () => {
+          socket.emit("stopButtonClicked");
+        };
+
         const updateVideoState = async (videoState) => {
           if (videoState.playing) {
             gameVideo.currentTime = videoState.time;
@@ -903,7 +965,7 @@
                 emoticon.style.left = `${x}px`;
                 emoticon.style.top = `${y}px`;
 
-                document.body.appendChild(emoticon);
+                videoContainer.appendChild(emoticon);
                 setTimeout(() => {
                   emoticon.remove();
                   currentEmoticons[name] = null;
@@ -948,7 +1010,7 @@
                   p.submitted ? "📄" : "❌"
                 }</span>
                                   </span><span>${
-                                    !p.submitHasBeenPlayed && p.submitted
+                                    !p.hasBeenSelected && p.submitted
                                       ? "👋"
                                       : ""
                                   }</span><span>${p.name}</span>
@@ -1193,8 +1255,8 @@
             return;
           }
 
-          if (endSec - startSec > 120) {
-            alert("La durée maximale est de 2 minutes");
+          if (endSec - startSec > 60 * 5) {
+            alert("La durée maximale est de 5 minutes");
             return;
           }
 
@@ -1237,20 +1299,9 @@
         /* ================= ACTION MENU ================= */
         document.querySelectorAll(".action-menu").forEach((menu) => {
           const toggle = menu.querySelector(".action-menu-toggle");
-          const items = menu.querySelectorAll(".action-menu-item");
+          const panel = menu.querySelector(".action-menu-panel");
 
-          toggle.addEventListener("click", (e) => {
-            e.stopPropagation();
-
-            // fermer les autres menus
-            document
-              .querySelectorAll(".action-menu.open")
-              .forEach((m) => m !== menu && m.classList.remove("open"));
-
-            menu.classList.toggle("open");
-          });
-
-          items.forEach((btn) => {
+          panel.querySelectorAll(".action-menu-item").forEach((btn) => {
             btn.addEventListener("click", () => {
               menu.classList.remove("open");
 
@@ -1271,9 +1322,33 @@
               }
             });
           });
+
+          toggle.addEventListener("click", (e) => {
+            e.stopPropagation();
+
+            // fermer les autres menus
+            document
+              .querySelectorAll(".action-menu.open")
+              .forEach((m) => m !== menu && m.classList.remove("open"));
+
+            menu.classList.toggle("open");
+
+            if (menu.classList.contains("open")) {
+              const rectPannel = panel.getBoundingClientRect();
+              const screenWidth = window.innerWidth;
+
+              if (rectPannel.right > screenWidth) {
+                panel.style.transform = `translateX(${
+                  screenWidth - rectPannel.right
+                }px)`;
+              } else if (rectPannel.left < 0) {
+                panel.style.transform = `translateX(${-rectPannel.left}px)`;
+              }
+            }
+          });
         });
 
-        // clic global → fermeture
+        // clic global → fermer tous les menus
         document.addEventListener("click", () => {
           document
             .querySelectorAll(".action-menu.open")
