@@ -29,8 +29,10 @@ const gameState = {
     index: 0,
     duration: 0,
     time: 0,
+    playing: false,
     // event
     playerSelected: false,
+    paused: false,
   },
   players: {},
   emoticons: {},
@@ -41,6 +43,11 @@ const gameState = {
   finishedRender: false,
   receivedSubtitles: false,
 };
+
+setInterval(() => {
+  if (!gameState.video.playing) return;
+  gameState.video.time += 0.5;
+}, 500);
 
 const app = express();
 
@@ -535,13 +542,22 @@ io.on("connection", (socket) => {
     }
 
     player.submitHasBeenPlayed = true;
-    gameState.video.playing = true;
     gameState.video.time = 0;
 
     gameState.video.playerSelected = true;
-    console.log(player.name, gameState);
+    gameState.video.playing = true;
+    console.log(player.name, "selected");
+
     io.emit("gameState", gameState);
-    // gameState.playerSelected = false;
+    gameState.video.playerSelected = false;
+  });
+
+  socket.on("pause", () => {
+    gameState.video.playing = !gameState.video.playing;
+    gameState.video.paused = true;
+
+    io.emit("gameState", gameState);
+    gameState.video.paused = false;
   });
 
   // ----- Disconnect -----

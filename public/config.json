@@ -483,7 +483,7 @@
           {
             "start": 45.57499999999982,
             "end": 48.9409999999998,
-            "placeholder": "Ca devrait faire apparaitre un ➕ sur la timeline."
+            "placeholder": "Ca devrait faire apparaitre un ➕ sur la 🕔 timeline."
           },
           {
             "start": 49.24299999999994,
@@ -493,7 +493,7 @@
           {
             "start": 52.70100000000002,
             "end": 56.48199999999997,
-            "placeholder": "Bon je viens de cliquer sur ➕, ca a rajouté le clip à la timeline !"
+            "placeholder": "Bon je viens de cliquer sur ➕, ca a rajouté le clip à la 🕔 !"
           },
           {
             "start": 56.70100000000002,
@@ -503,7 +503,7 @@
           {
             "start": 62.70100000000002,
             "end": 64.9050000000002,
-            "placeholder": "Pareil ❌ le supprime de la timeline"
+            "placeholder": "Pareil ❌ le supprime de la 🕔"
           },
           {
             "start": 65.57499999999982,

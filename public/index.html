@@ -44,6 +44,7 @@
           "
         >
           <div style="display: flex; justify-content: space-between">
+            <button id="pauseButton">⏸</button>
             <input
               id="saveNameInput"
               placeholder="Nom de la sauvegarde"
@@ -77,6 +78,7 @@
 
         <!-- RemoteView Timeline Container -->
       </div>
+
       <div
         id="timelineContainer"
         style="
@@ -247,7 +249,7 @@
         let isEditingSubtitle = false;
         let isRemoteVisible = false;
         let applyingRemoteChange = false;
-        let lastAppliedVideoState = { id: null, playing: null, time: null };
+        let lastAppliedVideoState = { id: null, time: null };
         let lastGameState = null;
 
         function savesKey(videoId) {
@@ -561,10 +563,12 @@
           hideOtherSubtitles(i);
           currentSubtitleIndex = i;
         };
+
         window.stopEditing = () => {
           isEditingSubtitle = false;
           showAllSubtitles();
         };
+
         function hideOtherSubtitles(i) {
           document
             .querySelectorAll(".subtitleItem")
@@ -572,11 +576,13 @@
               (el, j) => (el.style.display = j >= i - 1 ? "flex" : "none")
             );
         }
+
         function showAllSubtitles() {
           document
             .querySelectorAll(".subtitleItem")
             .forEach((el) => (el.style.display = "flex"));
         }
+
         function scrollToSub(i, duration = 0, smooth = true) {
           const callback = () =>
             document.getElementById(`sub-${i}`)?.scrollIntoView({
@@ -586,6 +592,7 @@
           if (duration === 0) callback();
           setTimeout(callback, duration);
         }
+
         window.updateSubtitle = (i, text) => {
           playerSubtitles[i].text = text;
           localStorage.setItem(
@@ -594,6 +601,7 @@
           );
           renderLocalOverlay();
         };
+
         window.seekTo = (t) => {
           gameVideo.currentTime = Math.min(gameVideo.duration, t + 0.01);
         };
@@ -624,7 +632,23 @@
 
           if (videoState.playerSelected) {
             applyingRemoteChange = true;
+            gameVideo.currentTime = 0;
             gameVideo.play();
+            console.log("play from state");
+            applyingRemoteChange = false;
+          }
+
+          if (videoState.paused) {
+            applyingRemoteChange = true;
+
+            if (videoState.playing) {
+              gameVideo.currentTime = videoState.time;
+              gameVideo.play();
+            } else {
+              gameVideo.pause();
+            }
+            console.log("pause from state");
+
             applyingRemoteChange = false;
           }
 
@@ -686,6 +710,11 @@
         function renderTimeline() {
           const container = document.getElementById("timelineContainer");
           container.innerHTML = "";
+
+          const label = document.createElement("label");
+          label.style.border = "1px solid black";
+          label.textContent = "🕔";
+          container.appendChild(label);
 
           const showSlots = !!selectedClipToInsert;
 
@@ -928,10 +957,22 @@
 
           libraryClipSelect.innerHTML = "";
 
-          Object.values(videosById)
+          const clips = Object.values(videosById).filter(
+            (v) => !isTemplate(v.id)
+          );
+
+          if (!clips.length) {
+            const o = document.createElement("option");
+            o.textContent = "Aucun clip créer";
+            o.disabled = true;
+            o.selected = true;
+            libraryClipSelect.appendChild(o);
+            return;
+          }
+
+          clips
             .sort((a, b) => a.id.toString().localeCompare(b.id.toString()))
             .forEach((v) => {
-              if (isTemplate(v.id)) return;
               const option = document.createElement("option");
               option.value = v.id;
               option.textContent = `${v.id} (${v.lang})`;
@@ -1183,6 +1224,11 @@
             .querySelectorAll(".action-menu.open")
             .forEach((m) => m.classList.remove("open"));
         });
+
+        // pause button
+        document.getElementById("pauseButton").onclick = () => {
+          socket.emit("pause");
+        };
 
         // init from cache
         const cachedViewId = localStorage.getItem("currentViewId");
