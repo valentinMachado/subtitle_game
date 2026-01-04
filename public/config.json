@@ -3,7 +3,7 @@
     {
       "id": "template-1",
       "lang": "ru",
-      "path": "videos/template-1.mp4",
+      "path": "clips/template-1.mp4",
       "subtitles": [
         {
           "start": 4.3659999999999854,
@@ -90,7 +90,7 @@
     {
       "id": "template-2",
       "lang": "ru",
-      "path": "videos/template-2.mp4",
+      "path": "clips/template-2.mp4",
       "subtitles": [
         {
           "start": 13.284000000000106,
@@ -148,80 +148,6 @@
           "placeholder": "11 Повернись к лесу передом, к Ивану задом."
         }
       ]
-    },
-    {
-      "id": "test",
-      "lang": "hi",
-      "path": "videos/test.mp4",
-      "subtitles": [
-        {
-          "start": 0,
-          "end": 0.1330000000000382,
-          "placeholder": "1: अगर हम उस लड़की से दोस्ती कर लें।"
-        },
-        {
-          "start": 0.2159999999998945,
-          "end": 2.5909999999998945,
-          "placeholder": "2: शहीद करणवीर सिंह आदर्श भवन\nदरियागंज, दिल्ली"
-        },
-        {
-          "start": 2.6749999999999545,
-          "end": 6.0909999999998945,
-          "placeholder": "3: आज़ादी हमारा जन्मसिद्ध अधिकार है।"
-        },
-        {
-          "start": 6.2999999999999545,
-          "end": 9.590999999999894,
-          "placeholder": "4: हमें अपने अधिकारों के लिए भीख नहीं मांगनी पड़ती।"
-        },
-        {
-          "start": 10.174999999999955,
-          "end": 13.549999999999955,
-          "placeholder": "5: आइए अपने बच्चों को क्रांति के विचार के बारे में सिखाना शुरू करें।"
-        },
-        {
-          "start": 13.965999999999894,
-          "end": 17.590999999999894,
-          "placeholder": "6: आइए अपने बच्चों को क्रांति के बारे में सिखाना शुरू करें।"
-        },
-        {
-          "start": 17.965999999999894,
-          "end": 19.133000000000038,
-          "placeholder": "7: एक क्षण।"
-        },
-        {
-          "start": 21.133000000000038,
-          "end": 23.465999999999894,
-          "placeholder": "8: घुमा-फिराकर बात करने की क्या ज़रूरत?"
-        },
-        {
-          "start": 24.508000000000038,
-          "end": 27.090999999999894,
-          "placeholder": "9: हमें उन्हें वहीं मारना चाहिए जहाँ उन्हें दर्द हो।"
-        },
-        {
-          "start": 29.965999999999894,
-          "end": 31.674999999999955,
-          "placeholder": "10: आओ गवर्नर स्कॉट को मार डालें।"
-        },
-        {
-          "start": 34.215999999999894,
-          "end": 37.840999999999894,
-          "placeholder": "11: स्कॉट को ही क्यों?\nहम सीधे किंग जॉर्ज को ही क्यों नहीं मार देते?"
-        },
-        {
-          "start": 38.13300000000004,
-          "end": 39.965999999999894,
-          "placeholder": "12: वह कहता है कि हमें स्कॉट को मार देना चाहिए।"
-        },
-        {
-          "start": 40.049999999999955,
-          "end": 43.174999999999955,
-          "placeholder": "13: मैंने कहा कि राजा जॉर्ज को मारना\nअच्छा रहेगा।"
-        }
-      ],
-      "startTime": "00:31:10",
-      "endTime": "00:31:55"
     }
   ],
   "template-1": {
@@ -588,32 +514,5 @@
       }
     ]
   },
-  "library_videos": [
-    {
-      "id": "frosty",
-      "lang": "ru",
-      "url": "https://www.youtube.com/watch?v=NpTkOhrTFTw",
-      "path": "./library_videos/frosty/frosty.mp4",
-      "srt": "./library_videos/frosty/frosty_ru.srt"
-    },
-    {
-      "id": "seller_of_dreams",
-      "lang": "ru",
-      "url": "https://www.youtube.com/watch?v=FgS-ejszO3Q",
-      "path": "./library_videos/seller_of_dreams/seller_of_dreams.mp4",
-      "srt": "./library_videos/seller_of_dreams/seller_of_dreams_ru.srt"
-    },
-    {
-      "id": "film_1",
-      "lang": "en",
-      "path": "./library_videos/film_1/film_1.mp4",
-      "srt": "./library_videos/film_1/film_1_en.srt"
-    },
-    {
-      "id": "film_2",
-      "lang": "hi",
-      "path": "./library_videos/film_2/film_2.mp4",
-      "srt": "./library_videos/film_2/film_2_hi.srt"
-    }
-  ]
+  "library_videos": []
 }

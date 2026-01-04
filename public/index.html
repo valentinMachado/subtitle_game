@@ -3,7 +3,7 @@
   <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>client</title>
-    <script src="/socket.io/socket.io.js"></script>
+    <script src="/vendor/socket.io.js"></script>
     <link rel="stylesheet" href="./style.css" />
   </head>
 
@@ -44,7 +44,7 @@
           "
         >
           <div>
-            <span id="clipLabel" style="cursor: inherit">📚</span>
+            <span id="clipLabel" style="cursor: inherit">📗</span>
             <select id="clipSelect"></select>
           </div>
           <div
@@ -139,14 +139,14 @@
             pattern=".*\S.*"
             title="Le nom du clip ne peut pas être vide"
           />
-          <button id="createClip">📚</button>
+          <button id="createClip">📗</button>
         </div>
 
         <div
           id="libraryClipSelectContainer"
           style="display: none; align-items: center; gap: 4px"
         >
-          <span id="clipLabel" style="cursor: inherit">📚</span>
+          <span id="clipLabel" style="cursor: inherit">📗</span>
           <select id="libraryClipSelect"></select>
           <button id="deleteClipButton" style="display: none">❌</button>
         </div>
@@ -536,7 +536,8 @@
           if (id === "playerView" || id === "remoteView") {
             socket.emit("needGameState");
           } else {
-            libraryVideo.src = libraryVideosById[librarySelect.value].path;
+            if (libraryVideosById.length > 0)
+              libraryVideo.src = libraryVideosById[librarySelect.value].path;
           }
 
           libraryClipSelectContainer.style.display =
@@ -844,25 +845,39 @@
           const container = document.getElementById("timelineContainer");
           container.innerHTML = "";
 
-          const label = document.createElement("label");
-          label.style.border = "1px solid black";
-          label.textContent = "🕔";
-          container.appendChild(label);
+          const labelStart = document.createElement("div");
+          labelStart.textContent = "🕔";
+          labelStart.style.flex = "0 0 auto"; // ne pas étirer
+          labelStart.style.padding = "4px";
+          labelStart.style.border = "1px solid black";
+          container.appendChild(labelStart);
 
           const showSlots = !!selectedClipToInsert;
 
-          // Slot initial
           if (showSlots) addSlot(0);
 
           timelineClips.forEach((clip, i) => {
             const div = document.createElement("div");
             div.className = "timelineClipItem";
-            div.textContent = clip.videoId + " - " + clip.name;
+            div.style.flex = "0 0 auto"; // taille fixe selon contenu
+            div.style.display = "flex";
+            div.style.alignItems = "center";
+            div.style.border = "1px solid black";
+            div.style.padding = "2px 4px";
+            div.style.marginRight = "4px";
 
-            // bouton delete
+            div.style.overflow = "hidden"; // empêche le texte de dépasser
+            div.style.textOverflow = "ellipsis";
+            div.style.whiteSpace = "nowrap";
+
+            const label = document.createElement("span");
+            label.textContent = clip.videoId + " - " + clip.name;
+            label.style.flex = "1"; // prend tout l'espace disponible
+            div.appendChild(label);
+
             const delBtn = document.createElement("button");
             delBtn.textContent = "❌";
-            delBtn.style.marginTop = "4px";
+            delBtn.style.flex = "0 0 auto"; // ne pas étirer
             delBtn.onclick = (e) => {
               e.stopPropagation();
               timelineClips.splice(i, 1);
@@ -873,7 +888,6 @@
 
             container.appendChild(div);
 
-            // slot après le clip
             if (showSlots) addSlot(i + 1);
           });
 
@@ -1298,7 +1312,7 @@
           socket.emit("createClip", {
             libraryVideoId: librarySelect.value,
             lang: libraryVideosById[librarySelect.value].lang,
-            id,
+            clipId: id,
             start,
             end,
           });
@@ -1425,8 +1439,7 @@
           .replace(/^-+|-+$/g, ""); // trim des "-"
       }
 
-      // localStorage.clear();
-      main();
+      window.addEventListener("DOMContentLoaded", main);
     </script>
   </body>
 </html>
