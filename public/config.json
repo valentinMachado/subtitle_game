@@ -173,18 +173,18 @@
       {
         "start": 30.906999999999925,
         "end": 33.06400000000008,
-        "placeholder": "Incroyable un arc vient d'apparaitre!"
+        "placeholder": "Il se passe quelque chose avec les sous-titres."
       },
       {
         "start": 33.2829999999999,
         "end": 36.36400000000003,
-        "text": "Je ne vous sens pas très concentré?",
+        "text": "Et oui on peut les modifier ici.",
         "placeholder": "5 Мы без этого не можем."
       },
       {
         "start": 36.57400000000007,
         "end": 38.8599999999999,
-        "placeholder": "Attendez il faut que je l'essaye!"
+        "placeholder": "Et bien je vais essayer!"
       },
       {
         "start": 44.031999999999925,
@@ -219,23 +219,23 @@
       {
         "start": 60.365999999999985,
         "end": 63.28099999999995,
-        "placeholder": "Vraiment ca m'interesse pas, j'ai un arc maintenant.."
+        "placeholder": "Une autre fois le champignon, j'ai des sous titres à écrire."
       },
       {
         "start": 63.656999999999925,
         "end": 66.40699999999993,
-        "placeholder": "J'adore l'arc et je m'en vais tirer quelques flèches."
+        "placeholder": "Merci pour tes explications, t'es un frère."
       },
       {
         "start": 66.61500000000001,
         "end": 71.404,
-        "text": "Va va Ivan, mais sache qu'il y a d'autres choses sur cette vue.",
+        "text": "Va va Ivan, mais sache que tu peux cliquer sur ⚙️ pour accéder aux différentes vues.",
         "placeholder": "14 Ну что ж, пусть по-твоему сбудется."
       },
       {
         "start": 71.65699999999993,
         "end": 75.06999999999994,
-        "text": "Tu peux sélectionner des clips fait dans la vue 📚",
+        "text": "Sur la vue 📚 tu peux créer des clips 📗",
         "placeholder": "15 Медведь мне будет кланяться,"
       },
       {
@@ -252,7 +252,7 @@
           {
             "start": 4.3659999999999854,
             "end": 6.81899999999996,
-            "placeholder": "C'est encore moi, c'est encore moi, c'est encore moi..."
+            "placeholder": "Champignon, Champignon, Champignon, Champignon..."
           },
           {
             "start": 13.32400000000007,
@@ -267,17 +267,17 @@
           {
             "start": 30.906999999999925,
             "end": 33.06400000000008,
-            "placeholder": "Ca alors, je pensais l'avoir perdue."
+            "placeholder": "Ca alors, les sous-titres ne sont pas les mêmes."
           },
           {
             "start": 33.2829999999999,
             "end": 36.36400000000003,
-            "placeholder": "Vous aimez donc les arcs."
+            "placeholder": "Oui actuellement ce sont les sous-titres d'un autre 🤖 joueur."
           },
           {
             "start": 36.57400000000007,
             "end": 38.8599999999999,
-            "placeholder": "Evidement comme tous le monde!"
+            "placeholder": "Ah je vois c'est lui qui as écris ca!"
           },
           {
             "start": 44.031999999999925,
@@ -287,7 +287,7 @@
           {
             "start": 45.94900000000007,
             "end": 48.4849999999999,
-            "placeholder": "Arrete tes conneries! - Pourquoi?"
+            "placeholder": "Reviens! - Pourquoi?"
           },
           {
             "start": 48.740999999999985,
@@ -297,7 +297,7 @@
           {
             "start": 53.32400000000007,
             "end": 56.819999999999936,
-            "placeholder": "Tout d'abord 🤝 est partagé avec les autres joueurs 🤖"
+            "placeholder": "Tout d'abord sur 🤝 la video est synchronisé pour chaque 🤖"
           },
           {
             "start": 57.07400000000007,
@@ -307,12 +307,12 @@
           {
             "start": 60.365999999999985,
             "end": 63.28099999999995,
-            "placeholder": "Vraiment il faudrait que tu te mette à l'arc."
+            "placeholder": "Oui et  ⏪▶️⏸️⏩⏹️ permette de naviguer."
           },
           {
             "start": 63.656999999999925,
             "end": 66.40699999999993,
-            "placeholder": "Mais ouais super ton truc @++"
+            "placeholder": "J'ai deja utilisé une appli, ne t'inquites pas."
           },
           {
             "start": 66.61500000000001,
@@ -322,12 +322,12 @@
           {
             "start": 71.65699999999993,
             "end": 75.06999999999994,
-            "placeholder": "Tu peux éditer des clips 📚 et les monter ensemble 📽️"
+            "placeholder": "Tu peux éditer des clips 📗 et les monter ensemble 📽️"
           },
           {
             "start": 75.2829999999999,
             "end": 78.44599999999991,
-            "placeholder": "Mais d'abord sélectionne le clip template-2 📚"
+            "placeholder": "Mais d'abord sélectionne le clip 📗 template-2"
           }
         ]
       }
@@ -393,37 +393,37 @@
     ],
     "players": [
       {
-        "name": "Cliquez ici puis sur ▶️",
+        "name": "Cliquez sur ▶️",
         "subtitles": [
           {
             "start": 13.284000000000106,
             "end": 18.652999999999793,
-            "placeholder": "Allo allo, j'ai l'impression qu'on a changé de clip, que dois-je faire ?"
+            "placeholder": "Il y a quelqu'un ? on a changé de 📗, j'ai pas tout compris..."
           },
           {
             "start": 31.076000000000022,
             "end": 33.11299999999983,
-            "placeholder": "Tu veux des infos ?"
+            "placeholder": "Je suis l'acteur du clip 📗 template-2"
           },
           {
             "start": 35.61700000000019,
             "end": 36.860999999999876,
-            "placeholder": "Vraiment ?"
+            "placeholder": "Je mérite un oscar."
           },
           {
             "start": 37.07600000000002,
             "end": 40.40599999999995,
-            "placeholder": "Depuis tout à l'heure tu ne penses qu'a ton arc."
+            "placeholder": "Pour commencer à monter 📽️ ton film."
           },
           {
             "start": 40.659000000000106,
             "end": 45.36400000000003,
-            "placeholder": "Mais bon, je vais te dire comment sauvegarder des sous-titres."
+            "placeholder": "Tu dois sauvegarder des sous-titres 📄 pour un 📗 clip."
           },
           {
             "start": 45.57499999999982,
             "end": 48.9409999999998,
-            "placeholder": "Pour commencer clique sur le bouton 💾"
+            "placeholder": "💾 enregistrera les sous-titres du 🤖 sélectionné"
           },
           {
             "start": 49.24299999999994,
@@ -448,7 +448,7 @@
           {
             "start": 65.57499999999982,
             "end": 70.2800000000002,
-            "placeholder": "🕔 tu as qu'a demander à 🤖 Joueur 851"
+            "placeholder": "pour 🕔 sélectionne 🤖 Joueur 851 et ⏹️ → ▶️"
           }
         ]
       },
@@ -458,27 +458,27 @@
           {
             "start": 13.284000000000106,
             "end": 18.652999999999793,
-            "placeholder": "Allo allo, je viens pour le bouton 🕔, 🤖 Joueur 851 ?"
+            "placeholder": "Il y a quelqu'un ? j'ai ▶️ 🤖 Joueur 851, comment fonctionne 🕔?"
           },
           {
             "start": 31.076000000000022,
             "end": 33.11299999999983,
-            "placeholder": "Je suis le 🤖 Joueur 851"
+            "placeholder": "C'est encore moi."
           },
           {
             "start": 35.61700000000019,
             "end": 36.860999999999876,
-            "placeholder": "L'unique ! "
+            "placeholder": "Donnez moi mon oscar !"
           },
           {
             "start": 37.07600000000002,
             "end": 40.40599999999995,
-            "placeholder": "Et je vais t'expliquer le bouton 📽️"
+            "placeholder": "Je vais t'expliquer le bouton 📽️"
           },
           {
             "start": 40.659000000000106,
             "end": 45.36400000000003,
-            "placeholder": "Mais oui tout d'abord clique sur le bouton 🕔"
+            "placeholder": "Mais oui tout d'abord clique sur 🕔"
           },
           {
             "start": 45.57499999999982,
@@ -493,22 +493,22 @@
           {
             "start": 52.70100000000002,
             "end": 56.48199999999997,
-            "placeholder": "Bon je viens de cliquer sur ➕, ca a rajouté le clip à la timeline !"
+            "placeholder": "Je viens de cliquer sur ➕, ca a rajouté le clip 📗 sous-titrés 📄 à 🕔"
           },
           {
             "start": 56.70100000000002,
             "end": 61.07400000000007,
-            "placeholder": "Tu peux rajouter différents clips 📚 sous-titrés ici 🕔"
+            "placeholder": "Oui et dans la vue 📚 tu peux créer de nouveau 📗"
           },
           {
             "start": 62.70100000000002,
             "end": 64.9050000000002,
-            "placeholder": "Pareil ❌ le supprime"
+            "placeholder": "❌ le supprime de 🕔"
           },
           {
             "start": 65.57499999999982,
             "end": 70.2800000000002,
-            "placeholder": "📽️ lance un rendu, visible sur 🎞️"
+            "placeholder": "📽️ lance un rendu de 🕔 visible sur 🎞️"
           }
         ]
       }

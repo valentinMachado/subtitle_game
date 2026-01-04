@@ -59,6 +59,7 @@ if (fs.existsSync(configPath)) {
   }
 } else {
   console.warn("⚠️ config.json non trouvé dans", configPath);
+  return;
 }
 
 // ---------- UTILITAIRES SRT ----------
