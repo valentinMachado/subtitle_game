@@ -139,7 +139,7 @@ vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 
 
-/public/videos/
+
 /public/library_videos/
 /public/render/
 cookies.txt
@@ -147,3 +147,4 @@ translateSRT.js
 convert.js
 download.js
 hide_subtitles.js
+create_srt.js

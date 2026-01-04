@@ -1,6 +1,15 @@
 {
   "name": "subtitle_game",
   "version": "1.0.0",
+  "bin": "server.js",
+  "pkg": {
+    "assets": [
+      "public/**/*"
+    ],
+    "targets": [
+      "node20-win-x64"
+    ]
+  },
   "description": "subtitle game",
   "homepage": "https://github.com/valentinMachado/subtitle_game#readme",
   "bugs": {
@@ -13,9 +22,10 @@
   "license": "ISC",
   "author": "",
   "type": "commonjs",
-  "main": "index.js",
+  "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node server.js",
+    "build": "npx pkg server.js --targets node18-win-x64 --output ./subtitle_game.exe"
   },
   "dependencies": {
     "express": "^5.2.1",

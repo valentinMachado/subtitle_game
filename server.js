@@ -1,28 +1,329 @@
+const os = require("os");
 const express = require("express");
 const socketio = require("socket.io");
 const fs = require("fs");
 const crypto = require("crypto");
-const { exec } = require("child_process");
 const path = require("path");
 const { spawn } = require("child_process");
+const { resolveBin } = require("./utils.js");
 
-function isTemplate(id) {
-  return id.startsWith("template-");
+// ---------- Paths ----------
+// Si on est dans un EXE pkg, process.execPath pointe vers l'exe
+const isPkg = typeof process.pkg !== "undefined";
+const appRoot = isPkg ? path.dirname(process.execPath) : __dirname;
+
+// On peut passer le dossier public via --data ./data ou fallback
+const dataArgIndex = process.argv.findIndex((a) => a.startsWith("--data"));
+const dataDir = dataArgIndex >= 0 ? process.argv[dataArgIndex + 1] : "public";
+const publicDir = path.resolve(appRoot, dataDir);
+const renderDir = path.join(publicDir, "render");
+
+// ---------- BINAIRES ----------
+const ffmpegPath = resolveBin("ffmpeg");
+const ffprobePath = resolveBin("ffprobe");
+
+// Vérifie que les binaires existent (tu peux aussi prévoir fallback si pkg)
+[ffmpegPath, ffprobePath].forEach((bin) => {
+  if (!fs.existsSync(bin)) {
+    console.error("❌ Binaire manquant :", bin);
+    process.exit(1);
+  }
+});
+
+// ---------- CHEMINS UTILS ----------
+const libraryVideoPath = (libraryVideoId) =>
+  path.join(
+    publicDir,
+    "library_videos",
+    libraryVideoId,
+    `${libraryVideoId}.mp4`
+  );
+const srtFilePath = (libraryVideoId) =>
+  path.join(
+    publicDir,
+    "library_videos",
+    libraryVideoId,
+    `${libraryVideoId}.srt`
+  );
+const clipOutputPath = (clipId) =>
+  path.join(publicDir, "videos", `${clipId}.mp4`);
+const configPath = path.join(publicDir, "config.json");
+
+// Exemple pour charger le config
+let config = {};
+if (fs.existsSync(configPath)) {
+  try {
+    config = JSON.parse(fs.readFileSync(configPath, "utf-8"));
+  } catch (err) {
+    console.error("❌ Impossible de parser config.json :", err);
+  }
+} else {
+  console.warn("⚠️ config.json non trouvé dans", configPath);
 }
 
-function getVideoDuration(path) {
-  return new Promise((resolve, reject) => {
-    exec(
-      `ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "${path}"`,
-      (err, stdout) => {
-        if (err) return reject(err);
-        const duration = parseFloat(stdout);
-        resolve(duration);
+// ---------- UTILITAIRES SRT ----------
+function parseSRT(srtContent) {
+  const entries = [];
+  const blocks = srtContent.split(/\r?\n\s*\r?\n/);
+
+  for (const block of blocks) {
+    const lines = block.split(/\r?\n/).filter(Boolean);
+    if (lines.length >= 2) {
+      const timeLine =
+        lines[1] && lines[1].includes("-->") ? lines[1] : lines[0];
+      const match = timeLine.match(
+        /(\d{2}):(\d{2}):(\d{2}),(\d{3})\s*-->?\s*(\d{2}):(\d{2}):(\d{2}),(\d{3})/
+      );
+      if (match) {
+        const start =
+          parseInt(match[1]) * 3600 +
+          parseInt(match[2]) * 60 +
+          parseInt(match[3]) +
+          parseInt(match[4]) / 1000;
+        const end =
+          parseInt(match[5]) * 3600 +
+          parseInt(match[6]) * 60 +
+          parseInt(match[7]) +
+          parseInt(match[8]) / 1000;
+        const textLines = lines.slice(lines.indexOf(timeLine) + 1);
+        entries.push({ start, end, placeholder: textLines.join("\n").trim() });
       }
+    }
+  }
+
+  console.log(`✅ Sous-titres chargés : ${entries.length} entrées`);
+  return entries;
+}
+
+function hhmmssToSeconds(hms) {
+  const [hh, mm, ss] = hms.split(":").map(Number);
+  return hh * 3600 + mm * 60 + ss;
+}
+
+function clipSubtitles(subtitles, clipStart, clipEnd) {
+  return subtitles
+    .filter((s) => s.end > clipStart && s.start < clipEnd)
+    .map((s, index) => ({
+      start: Math.max(0, s.start - clipStart),
+      end: Math.min(clipEnd - clipStart, s.end - clipStart),
+      placeholder: index + 1 + ": " + s.placeholder,
+    }));
+}
+
+// ---------- PROCESS VIDEO ----------
+async function processVideo(inputPath, outputPath, options = {}) {
+  const {
+    startTime = 0,
+    endTime = null,
+    addBlackBox = false,
+    blackBoxHeight = 80,
+    blackBoxColor = "black@1",
+  } = options;
+  let vf = "";
+  if (addBlackBox)
+    vf = `drawbox=x=0:y=ih-${blackBoxHeight}:width=iw:height=${blackBoxHeight}:color=${blackBoxColor}:t=fill`;
+
+  const args = ["-i", inputPath.replace(/\\/g, "/")];
+  if (startTime) args.push("-ss", startTime.toString());
+  if (endTime) args.push("-to", endTime.toString());
+  if (vf) args.push("-vf", vf);
+  args.push("-c:a", "copy", "-y", outputPath.replace(/\\/g, "/"));
+
+  console.log("FFmpeg command:", ffmpegPath, args.join(" "));
+
+  return new Promise((resolve, reject) => {
+    const ff = spawn(ffmpegPath, args, { stdio: ["ignore", "pipe", "pipe"] });
+    ff.stdout.on("data", (data) => process.stdout.write(data.toString()));
+    ff.stderr.on("data", (data) => process.stderr.write(data.toString()));
+    ff.on("close", (code) => {
+      if (code === 0) resolve(outputPath);
+      else reject(new Error(`FFmpeg exited with code ${code}`));
+    });
+  });
+}
+
+async function addVideoToConfig(
+  outputPath,
+  clipId,
+  lang,
+  start,
+  end,
+  libraryVideoId
+) {
+  let config = { videos: [] };
+  if (fs.existsSync(configPath)) {
+    try {
+      config = JSON.parse(await fs.promises.readFile(configPath, "utf-8"));
+    } catch (err) {
+      console.warn("⚠️ Impossible de lire ou parser config.json", err);
+    }
+  }
+
+  let subtitles = [];
+  try {
+    const srtContent = await fs.promises.readFile(
+      srtFilePath(libraryVideoId),
+      "utf-8"
+    );
+    subtitles = clipSubtitles(
+      parseSRT(srtContent),
+      hhmmssToSeconds(start),
+      hhmmssToSeconds(end)
+    );
+  } catch (err) {
+    console.error("❌ Impossible de lire le SRT :", err);
+  }
+
+  const newVideo = {
+    id: clipId,
+    lang,
+    path: `videos/${clipId}.mp4`,
+    subtitles,
+    startTime: start,
+    endTime: end,
+  };
+  const existingIndex = config.videos.findIndex((v) => clipId === v.id);
+  if (existingIndex >= 0) config.videos[existingIndex] = newVideo;
+  else config.videos.push(newVideo);
+
+  try {
+    await fs.promises.writeFile(
+      configPath,
+      JSON.stringify(config, null, 2),
+      "utf-8"
+    );
+    console.log(`✅ Vidéo "${clipId}" ajoutée ou mise à jour dans config.json`);
+  } catch (err) {
+    console.error("❌ Erreur lors de l'écriture du config.json :", err);
+  }
+}
+
+// ---------- FFPROBE ----------
+function getVideoDuration(videoPath) {
+  return new Promise((resolve, reject) => {
+    const args = [
+      "-v",
+      "error",
+      "-show_entries",
+      "format=duration",
+      "-of",
+      "default=noprint_wrappers=1:nokey=1",
+      videoPath.replace(/\\/g, "/"),
+    ];
+    const probe = spawn(ffprobePath, args);
+    let output = "";
+    probe.stdout.on("data", (data) => (output += data.toString()));
+    probe.stderr.on("data", (data) =>
+      console.error("[ffprobe]", data.toString())
+    );
+    probe.on("close", (code) =>
+      code !== 0
+        ? reject(new Error("ffprobe failed"))
+        : resolve(parseFloat(output))
     );
   });
 }
 
+// ---------- SRT <-> VIDEO ----------
+function secondsToSRTTime(seconds) {
+  const ms = Math.floor((seconds % 1) * 1000);
+  const total = Math.floor(seconds);
+  const s = total % 60;
+  const m = Math.floor((total / 60) % 60);
+  const h = Math.floor(total / 3600);
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(
+    s
+  ).padStart(2, "0")},${String(ms).padStart(3, "0")}`;
+}
+
+function subtitlesToSRT(subtitles) {
+  return subtitles
+    .map(
+      (s, i) => `${i + 1}
+${secondsToSRTTime(s.start)} --> ${secondsToSRTTime(s.end)}
+${s.text ? s.text : s.placeholder}
+
+`
+    )
+    .join("");
+}
+
+// ---------- RENDER ----------
+const concatVideos = async (count) => {
+  return new Promise((resolve, reject) => {
+    if (!fs.existsSync(renderDir)) fs.mkdirSync(renderDir, { recursive: true });
+    const concatFile = path.join(renderDir, "concat.txt");
+    const finalOutput = path.join(renderDir, "final.mp4");
+    const concatContent = Array.from({ length: count })
+      .map((_, i) => `file '${i}.mp4'`)
+      .join("\n");
+    fs.writeFileSync(concatFile, concatContent, "utf8");
+    const ffmpegArgs = [
+      "-f",
+      "concat",
+      "-safe",
+      "0",
+      "-i",
+      "concat.txt",
+      "-c",
+      "copy",
+      "-y",
+      "final.mp4",
+    ];
+    const ffmpegProcess = spawn(ffmpegPath, ffmpegArgs, {
+      cwd: renderDir,
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    ffmpegProcess.stderr.on("data", (data) => console.error(data.toString()));
+    ffmpegProcess.on("close", (code) =>
+      code !== 0
+        ? reject(new Error("CONCAT_FAILED"))
+        : resolve({ finalOutput, concatFile })
+    );
+  });
+};
+
+const cleanupRenderFiles = (count, concatFile) => {
+  for (let i = 0; i < count; i++) {
+    const clipPath = path.join(renderDir, `${i}.mp4`);
+    if (fs.existsSync(clipPath)) fs.unlinkSync(clipPath);
+  }
+  if (fs.existsSync(concatFile)) fs.unlinkSync(concatFile);
+  console.log("Temporary render files cleaned up");
+};
+
+const renderSubtitles = async (inputVideoPath, subtitles, index) => {
+  return new Promise((resolve) => {
+    if (!fs.existsSync(renderDir)) fs.mkdirSync(renderDir, { recursive: true });
+    const srtPath = path.join(renderDir, `${index}.srt`).replace(/\\/g, "/");
+    const outputPath = path.join(renderDir, `${index}.mp4`).replace(/\\/g, "/");
+    fs.writeFileSync(srtPath, subtitlesToSRT(subtitles), { encoding: "utf8" });
+    const ffmpegArgs = [
+      "-i",
+      inputVideoPath.replace(/\\/g, "/"),
+      "-vf",
+      `subtitles=${srtPath.replace(
+        /:/g,
+        "\\\\:"
+      )}:force_style='Fontsize=24,PrimaryColour=&HFFFFFF&'`,
+      "-c:a",
+      "copy",
+      "-y",
+      outputPath,
+    ];
+    const ffmpegProcess = spawn(ffmpegPath, ffmpegArgs, {
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    ffmpegProcess.stderr.on("data", (data) =>
+      console.error(`FFmpeg stderr: ${data}`)
+    );
+    ffmpegProcess.on("close", () => {
+      fs.unlink(srtPath, () => resolve());
+    });
+  });
+};
+
+// ---------- GAMESTATE ----------
 const gameState = {
   video: {
     id: null,
@@ -30,7 +331,6 @@ const gameState = {
     duration: 0,
     time: 0,
     playing: false,
-    // event
     playerSelected: false,
     paused: false,
   },
@@ -39,7 +339,6 @@ const gameState = {
   clipSaves: {},
   timeline: [],
   renderUrl: null,
-  // events
   finishedRender: false,
   receivedSubtitles: false,
 };
@@ -52,29 +351,47 @@ const setGameStateVideoTime = (t) => {
 };
 
 setInterval(() => {
-  if (!gameState.video.playing) return;
-  setGameStateVideoTime(gameState.video.time + 0.5);
+  if (gameState.video.playing)
+    setGameStateVideoTime(gameState.video.time + 0.5);
 }, 500);
 
+// ---------- EXPRESS + SOCKET.IO ----------
 const app = express();
 
-const server = app.listen(3000, "0.0.0.0", () => {
-  console.log("Serveur démarré sur http://0.0.0.0:3000");
-});
-const io = socketio(server);
-
-// ---------- CONFIG ----------
-
-function loadConfig() {
-  return JSON.parse(fs.readFileSync("public/config.json"));
+function getLocalIP() {
+  const interfaces = os.networkInterfaces();
+  for (const name of Object.keys(interfaces)) {
+    for (const iface of interfaces[name]) {
+      // on veut une IPv4 qui n’est pas interne (pas 127.0.0.1)
+      if (iface.family === "IPv4" && !iface.internal) {
+        return iface.address;
+      }
+    }
+  }
+  return "localhost";
 }
 
+const PORT = 3000;
+const server = app.listen(PORT, "0.0.0.0", () => {
+  const localIP = getLocalIP();
+  console.log(`Serveur démarré :`);
+  console.log(`- Local : http://localhost:${PORT}`);
+  console.log(
+    `- Réseau : http://${localIP}:${PORT} (accessible depuis d'autres appareils)`
+  );
+});
+
+const io = socketio(server);
+app.use(express.static(publicDir));
+
+// ---------- LOAD VIDEO FUNCTION ----------
 const currentTemplatePlayerIds = [];
+const isTemplate = (id) => id.startsWith("template-");
+
 const loadVideoId = async (id) => {
   let index = config.videos.findIndex((v) => v.id === id);
-
   if (index === -1) {
-    console.warn(`⚠️ Video "${id}" non trouvée dans config.json`);
+    console.warn(`⚠️ Video "${id}" non trouvée`);
     index = 0;
   }
 
@@ -83,32 +400,22 @@ const loadVideoId = async (id) => {
   setGameStateVideoTime(0);
   gameState.video.playing = false;
 
-  // Récupération dynamique de la durée
   try {
     gameState.video.duration = await getVideoDuration(
-      `public/${config.videos[gameState.video.index]?.path}`
+      path.join(publicDir, config.videos[gameState.video.index]?.path)
     );
-    console.log("Durée vidéo:", gameState.video.duration);
   } catch (e) {
-    console.error("Erreur récupération durée vidéo:", e);
+    console.error(e);
     gameState.video.duration = 0;
   }
 
-  currentTemplatePlayerIds.forEach(([id]) => {
-    delete gameState.players[id];
-  });
-
+  currentTemplatePlayerIds.forEach((id) => delete gameState.players[id]);
   Object.values(gameState.players).forEach((p) => {
     p.submitted = false;
     p.hasBeenSelected = false;
-
     p.subtitles = isTemplate(gameState.video.id)
       ? config[gameState.video.id].defaultSubtitles
       : config.videos[gameState.video.index].subtitles;
-
-    if (p.subtitles.length === 0) {
-      console.warn(`⚠️ Video "${gameState.video.id}" sans sous-titres`);
-    }
   });
 
   if (isTemplate(gameState.video.id) && config[gameState.video.id]) {
@@ -132,175 +439,17 @@ const loadVideoId = async (id) => {
   io.emit("gameState", gameState);
 };
 
-let config = loadConfig();
-loadVideoId("template-1");
-
-// ---------- STATIC FILES ----------
-
-app.use(express.static("public"));
-
-// Fonction pour convertir des secondes en format SRT
-function secondsToSRTTime(seconds) {
-  const ms = Math.floor((seconds % 1) * 1000);
-  const total = Math.floor(seconds);
-  const s = total % 60;
-  const m = Math.floor((total / 60) % 60);
-  const h = Math.floor(total / 3600);
-  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(
-    s
-  ).padStart(2, "0")},${String(ms).padStart(3, "0")}`;
-}
-
-// Fonction pour convertir les sous-titres en format SRT
-function subtitlesToSRT(subtitles) {
-  return subtitles
-    .map((s, i) => {
-      return `${i + 1}
-${secondsToSRTTime(s.start)} --> ${secondsToSRTTime(s.end)}
-${s.text ? s.text : s.placeholder}
-
-`;
-    })
-    .join("");
-}
-
-const concatVideos = async (count) => {
-  return new Promise((resolve, reject) => {
-    const outputDir = path.join("public", "render");
-    const concatFile = path.join(outputDir, "concat.txt");
-    const finalOutput = path.join(outputDir, "final.mp4");
-
-    if (!fs.existsSync(outputDir)) {
-      fs.mkdirSync(outputDir, { recursive: true });
-    }
-
-    const concatContent = Array.from({ length: count })
-      .map((_, i) => `file '${i}.mp4'`)
-      .join("\n");
-
-    fs.writeFileSync(concatFile, concatContent, "utf8");
-
-    const ffmpegArgs = [
-      "-f",
-      "concat",
-      "-safe",
-      "0",
-      "-i",
-      "concat.txt", // relatif au cwd
-      "-c",
-      "copy",
-      "-y",
-      "final.mp4", // relatif au cwd
-    ];
-
-    const ffmpegProcess = spawn("ffmpeg", ffmpegArgs, {
-      cwd: outputDir,
-      stdio: ["ignore", "pipe", "pipe"],
-    });
-
-    ffmpegProcess.stderr.on("data", (data) => {
-      console.error("FFmpeg concat stderr:", data.toString());
-    });
-
-    ffmpegProcess.on("close", (code) => {
-      if (code !== 0) {
-        return reject(new Error("CONCAT_FAILED"));
-      }
-      resolve({ finalOutput, concatFile });
-    });
-  });
-};
-
-const cleanupRenderFiles = (count, concatFile) => {
-  const outputDir = path.join("public", "render");
-
-  for (let i = 0; i < count; i++) {
-    const clipPath = path.join(outputDir, `${i}.mp4`);
-    if (fs.existsSync(clipPath)) {
-      fs.unlinkSync(clipPath);
-    }
-  }
-
-  if (fs.existsSync(concatFile)) {
-    fs.unlinkSync(concatFile);
-  }
-
-  console.log("Temporary render files cleaned up");
-};
-
-const renderSubtitles = async (inputVideoPath, subtitles, index) => {
-  return new Promise((resolve) => {
-    const outputDir = path.join("public", "render");
-    if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir, { recursive: true });
-    const renderId = index;
-    const srtPath = path.join(outputDir, `${renderId}.srt`).replace(/\\/g, "/");
-    const outputPath = path
-      .join(outputDir, `${renderId}.mp4`)
-      .replace(/\\/g, "/");
-
-    // Générer le fichier SRT
-    console.log(subtitles.length, "sous-titres");
-    const srtContent = subtitlesToSRT(subtitles);
-    fs.writeFileSync(srtPath, srtContent, { encoding: "utf8" });
-
-    // Commande FFmpeg
-    const ffmpegArgs = [
-      "-i",
-      inputVideoPath,
-      "-vf",
-      `subtitles=${srtPath.replace(
-        /:/g,
-        "\\\\:"
-      )}:force_style='Fontsize=24,PrimaryColour=&HFFFFFF&'`,
-      "-c:a",
-      "copy",
-      "-y",
-      outputPath,
-    ];
-
-    console.log("Spawning FFmpeg with args:", ffmpegArgs.join(" "));
-
-    const ffmpegProcess = spawn("ffmpeg", ffmpegArgs, {
-      stdio: ["ignore", "pipe", "pipe"],
-    });
-
-    ffmpegProcess.stderr.on("data", (data) => {
-      console.error(`FFmpeg stderr: ${data}`);
-    });
-
-    ffmpegProcess.on("close", (code) => {
-      if (code !== 0) {
-        console.error("FFmpeg exited with code", code);
-      }
-
-      if (!fs.existsSync(outputPath)) {
-        console.error(`Output file ${outputPath} does not exist`);
-      }
-
-      // Suppression asynchrone du fichier .srt
-      fs.unlink(srtPath, (err) => {
-        if (err) {
-          console.error(
-            `Erreur lors de la suppression du fichier ${srtPath}:`,
-            err
-          );
-        } else {
-          console.log(`Fichier ${srtPath} supprimé avec succès.`);
-          resolve();
-        }
-      });
-    });
-  });
-};
-
 let isRendering = false;
 const render = async () => {
   if (!gameState.timeline.length) return;
   if (isRendering) return;
   isRendering = true;
 
-  if (fs.existsSync("./public/render/final.mp4")) {
-    fs.unlinkSync("./public/render/final.mp4");
+  const finalOutputPath = path.join(publicDir, "render", "final.mp4");
+
+  // Supprimer l'ancien rendu si existant
+  if (fs.existsSync(finalOutputPath)) {
+    fs.unlinkSync(finalOutputPath);
     gameState.renderUrl = null;
     io.emit("gameState", gameState);
   }
@@ -310,15 +459,17 @@ const render = async () => {
       const videoId = gameState.timeline[index].videoId;
       const subtitles = gameState.timeline[index].subtitles;
 
-      let videoIndex = config.videos.findIndex((v) => v.id === videoId);
+      const videoIndex = config.videos.findIndex((v) => v.id === videoId);
+      if (videoIndex === -1) continue;
+
+      const inputVideoPath = path.join(
+        publicDir,
+        config.videos[videoIndex].path
+      );
 
       console.log("Rendering subtitles for video", videoId, "at index", index);
 
-      await renderSubtitles(
-        `public/${config.videos[videoIndex].path}`,
-        subtitles,
-        index
-      );
+      await renderSubtitles(inputVideoPath, subtitles, index);
     }
 
     // Concat finale
@@ -337,12 +488,14 @@ const render = async () => {
     // Cleanup
     cleanupRenderFiles(gameState.timeline.length, concatFile);
   } catch (err) {
-    console.error(err);
+    console.error("❌ Render error:", err);
+    isRendering = false;
   }
 };
 
-// ---------- SOCKETS ----------
+loadVideoId("template-1");
 
+// ---------- SOCKETS ----------
 io.on("connection", (socket) => {
   socket.on("register", ({ role, playerName }) => {
     socket.role = role;
@@ -506,37 +659,40 @@ io.on("connection", (socket) => {
     }
   });
 
-  socket.on("createClip", ({ libraryVideoId, lang, id, start, end }) => {
-    // Arguments séparés, pas de concaténation dans une string
-    const args = [
-      "./create_clip.js",
-      libraryVideoId,
-      id, // ton clipId
-      lang,
-      start,
-      end,
-    ];
-
-    const child = spawn("node", args, { stdio: ["ignore", "pipe", "pipe"] });
-
-    // Affiche stdout en temps réel
-    child.stdout.on("data", (data) => {
-      console.log(`[stdout] ${data.toString()}`);
-    });
-
-    // Affiche stderr en temps réel
-    child.stderr.on("data", (data) => {
-      console.error(`[stderr] ${data.toString()}`);
-    });
-
-    child.on("close", (code) => {
-      if (code === 0) {
-        console.log(`✅ Clip "${id}" créé avec succès !`);
-      } else {
-        console.error(`❌ FFmpeg/Script terminé avec code ${code}`);
+  socket.on(
+    "createClip",
+    async ({ libraryVideoId, clipId, lang, start, end }) => {
+      if (!libraryVideoId || !clipId || !lang || start == null || end == null) {
+        console.error("❌ Paramètres manquants pour createClip");
+        return;
       }
-    });
-  });
+
+      const inputPath = libraryVideoPath(libraryVideoId);
+      const outputPath = clipOutputPath(clipId);
+
+      await processVideo(inputPath, outputPath, {
+        startTime: start,
+        endTime: end,
+        addBlackBox: false,
+      });
+      console.log(`✅ Vidéo traitée : ${outputPath}`);
+
+      try {
+        // Ajout au config.json
+        await addVideoToConfig(
+          outputPath,
+          clipId,
+          lang,
+          start,
+          end,
+          libraryVideoId
+        );
+        console.log(`✅ Vidéo ajoutée à config.json : ${clipId}`);
+      } catch (err) {
+        console.error("❌ Erreur lors de l'ajout au config :", err);
+      }
+    }
+  );
 
   // ----- Player selection -----
 
@@ -598,15 +754,14 @@ io.on("connection", (socket) => {
 });
 
 // ---------- CONFIG HOT RELOAD ----------
-
-fs.watch("public/config.json", () => {
+const reloadConfig = async () => {
   try {
-    config = loadConfig();
-
+    const raw = await fs.promises.readFile(configPath, "utf-8");
+    config = JSON.parse(raw);
     loadVideoId(gameState.video.id);
-
     io.emit("reload");
   } catch (e) {
-    console.error(e);
+    setTimeout(reloadConfig, 100);
   }
-});
+};
+fs.watch(configPath, () => reloadConfig());
