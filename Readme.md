@@ -16,8 +16,6 @@ public/
 Double-cliquez sur `subtitle_game.exe` pour démarrer le serveur.
 Une console va s’ouvrir et afficher les logs du serveur.
 
-Vous pouvez maintenant accéder à l’interface du jeu, gérer les clips et les sous-titres.
-
 Ouvrez votre navigateur et allez à l’adresse :
 http://localhost:3000 et lisez la video pour démarrer le tutoriel !
 
