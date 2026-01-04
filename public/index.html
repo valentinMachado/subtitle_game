@@ -40,36 +40,6 @@
             display: flex;
             flex-direction: column;
             gap: 8px;
-            max-width: 70%;
-          "
-        >
-          <div style="display: flex; justify-content: space-between">
-            <button id="videoStateButton">🔄</button>
-            <button id="stopButton">⏹️</button>
-            <div style="display: inline-flex; align-items: center; gap: 4px">
-              <input
-                id="saveNameInput"
-                placeholder="Nom de la sauvegarde"
-                value="sous-titres"
-                style="display: none; max-width: 50%"
-              />
-              <button id="saveButton" disabled style="display: none">💾</button>
-            </div>
-          </div>
-          <div id=""></div>
-          <div
-            id="playersList"
-            style="display: block; width: 100%; overflow-y: auto"
-          ></div>
-        </div>
-
-        <!-- Colonne droite -->
-        <div
-          style="
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
             min-width: 0;
           "
         >
@@ -83,6 +53,35 @@
           ></div>
         </div>
 
+        <!-- Colonne droite -->
+        <div
+          style="
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-width: 70%;
+          "
+        >
+          <div style="display: flex; justify-content: space-between">
+            <button id="previousTimeButton">⏪</button>
+            <button id="videoStateButton">🔄</button>
+            <button id="nextTimeButton">⏩</button>
+            <button id="stopButton">⏹️</button>
+            <button id="saveButton" disabled style="display: none">💾</button>
+            <input
+              id="saveNameInput"
+              placeholder="Nom de la sauvegarde"
+              value="sous-titres"
+              style="display: none; max-width: 50%"
+            />
+          </div>
+          <div id=""></div>
+          <div
+            id="playersList"
+            style="display: block; width: 100%; overflow-y: auto"
+          ></div>
+        </div>
         <!-- RemoteView Timeline Container -->
       </div>
 
@@ -142,6 +141,15 @@
           />
           <button id="createClip">📚</button>
         </div>
+
+        <div
+          id="libraryClipSelectContainer"
+          style="display: none; align-items: center; gap: 4px"
+        >
+          <span id="clipLabel" style="cursor: inherit">📚</span>
+          <select id="libraryClipSelect"></select>
+          <button id="deleteClipButton" style="display: none">❌</button>
+        </div>
       </div>
     </div>
 
@@ -164,17 +172,8 @@
           </div>
         </div>
 
-        <span id="playerName"></span>
+        <span style="background: #489dce" id="playerName"></span>
 
-        <div
-          id="libraryClipSelectContainer"
-          style="display: none; align-items: center; gap: 4px"
-        >
-          <span id="clipLabel" style="cursor: inherit">📚</span>
-          <select id="libraryClipSelect"></select>
-        </div>
-
-        <button id="deleteClipButton" style="display: none">❌</button>
         <button id="submitButton">📄</button>
 
         <div id="emoticonActionMenu" style="display: none" class="action-menu">
@@ -278,6 +277,9 @@
 
         const videoStateButton = document.getElementById("videoStateButton");
         const stopButton = document.getElementById("stopButton");
+        const previousTimeButton =
+          document.getElementById("previousTimeButton");
+        const nextTimeButton = document.getElementById("nextTimeButton");
 
         const emoticonActionMenu =
           document.getElementById("emoticonActionMenu");
@@ -424,6 +426,7 @@
           const [, mm, rest] = t.split(":");
           return `${mm}:${rest}`;
         };
+
         function renderSubtitles() {
           subtitlesList.innerHTML = playerSubtitles
             .map(
@@ -648,6 +651,8 @@
           document
             .querySelectorAll(".subtitleItem")
             .forEach((el) => (el.style.display = "flex"));
+
+          if (currentSubtitleIndex !== null) scrollToSub(currentSubtitleIndex);
         }
 
         let scrollTimeout = null;
@@ -710,6 +715,14 @@
 
         stopButton.onclick = () => {
           socket.emit("stopButtonClicked");
+        };
+
+        previousTimeButton.onclick = () => {
+          socket.emit("previousTimeButtonClicked");
+        };
+
+        nextTimeButton.onclick = () => {
+          socket.emit("nextTimeButtonClicked");
         };
 
         const updateVideoState = async (videoState) => {
@@ -895,6 +908,9 @@
 
         /* ================= SOCKET GAMESTATE ================= */
         let currentEmoticons = {};
+        const receivedSound = new Audio("/sounds/notif.wav");
+        receivedSound.volume = 0.6;
+
         socket.on("gameState", async (state) => {
           lastGameState = state;
 
@@ -909,11 +925,16 @@
 
           renderClipSelect(state.video.id);
 
-          if (currentViewId == "playerView" && state.receivedSubtitles) {
-            submitButton.classList.remove("pulse-once"); // reset au cas où
-            void submitButton.offsetWidth; // force reflow
-            submitButton.classList.add("pulse-once");
-            submitButton.textContent = "👋";
+          if (state.receivedSubtitles) {
+            receivedSound.currentTime = 0;
+            receivedSound.play();
+
+            if (currentViewId == "playerView") {
+              submitButton.classList.remove("pulse-once"); // reset au cas où
+              void submitButton.offsetWidth; // force reflow
+              submitButton.classList.add("pulse-once");
+              submitButton.textContent = "👋";
+            }
           }
 
           // opti
@@ -963,7 +984,9 @@
                   videoRect.width * 0.5 +
                   (Math.random() - 0.5) * 2 * videoRect.width * 0.3;
                 const y =
-                  -Math.random() * videoRect.height * 0.5 + videoRect.bottom;
+                  -Math.random() * videoRect.height * 0.5 +
+                  videoRect.bottom -
+                  50;
                 emoticon.style.left = `${x}px`;
                 emoticon.style.top = `${y}px`;
 
@@ -1021,7 +1044,9 @@
             )
             .join("");
         }
+
         window.selectPlayer = (id) => socket.emit("selectPlayer", id);
+
         function renderClipSelect(activeId) {
           clipSelect.innerHTML = "";
 
@@ -1098,6 +1123,7 @@
               libraryClipSelect.appendChild(option);
             });
         }
+
         renderLibraryView();
 
         deleteClipButton.onclick = () => {
@@ -1151,6 +1177,8 @@
             name,
             subtitles,
           });
+
+          console.log(subtitles);
 
           // Feedback utilisateur
           saveButton.textContent = "✅";
@@ -1285,6 +1313,12 @@
 
         /* ================= KEYBOARD ================= */
         window.addEventListener("keydown", (e) => {
+          const tag = e.target.tagName;
+          const isTyping =
+            tag === "INPUT" || tag === "TEXTAREA" || e.target.isContentEditable;
+
+          if (isTyping) return;
+
           if (e.key === "f" || e.key === "F") {
             if (!document.fullscreenElement) {
               videoContainer.requestFullscreen();

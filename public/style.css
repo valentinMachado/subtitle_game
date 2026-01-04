@@ -13,25 +13,6 @@ body {
   box-sizing: inherit;
 }
 
-button {
-  padding: 14px;
-  font-size: 16px;
-  background: #4caf50;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-}
-
-button.secondary {
-  background: #2196f3;
-}
-
-button:disabled {
-  background: #ccc;
-  cursor: not-allowed;
-}
-
 /* ===== VIDEO ===== */
 #videoContainer {
   position: fixed;
@@ -123,11 +104,11 @@ video {
 .subtitleText {
   display: flex;
   width: 100%;
-  padding: 0px 30px 30px 0px;
+  padding: 2px 30px 30px 2px;
 }
 
 .subtitleItem.active {
-  background: #e3f2fd;
+  background: #ffeb3b;
   border-left-color: #4caf50;
 }
 
@@ -152,7 +133,7 @@ video {
 /* ===== REMOTE VIEW ===== */
 
 #remoteView button {
-  padding: 10px;
+  padding: 5px;
 }
 
 .playerItem {
@@ -285,13 +266,19 @@ video {
   #remoteView input {
     font-size: 30px;
   }
+
+  #remoteView button {
+    font-size: 20px;
+    width: 100%;
+  }
 }
 
 /* ===== BOUTONS INTERACTIFS ===== */
+
 button {
   padding: 14px;
   font-size: 16px;
-  background: #4caf50;
+  background: #489dce;
   color: white;
   border: none;
   border-radius: 6px;
@@ -310,20 +297,8 @@ button:active {
   background-color: #3e8e41; /* un peu plus foncé au click */
 }
 
-button.secondary {
-  background: #2196f3;
-}
-
-button.secondary:hover {
-  background: #1e88e5;
-}
-
-button.secondary:active {
-  background: #1976d2;
-}
-
 button:disabled {
-  background: #ccc;
+  background: #333;
   cursor: not-allowed;
   box-shadow: none;
   transform: none;
@@ -391,6 +366,7 @@ button:disabled {
   padding: 2px 4px;
   border-radius: 2%;
   display: flex;
+  flex-direction: column;
   position: absolute;
   z-index: 1000;
   font-size: xxx-large;

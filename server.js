@@ -44,9 +44,16 @@ const gameState = {
   receivedSubtitles: false,
 };
 
+const setGameStateVideoTime = (t) => {
+  gameState.video.time = Math.max(
+    0,
+    Math.min(gameState.video.duration, t + 0.01)
+  );
+};
+
 setInterval(() => {
   if (!gameState.video.playing) return;
-  gameState.video.time += 0.5;
+  setGameStateVideoTime(gameState.video.time + 0.5);
 }, 500);
 
 const app = express();
@@ -73,7 +80,7 @@ const loadVideoId = async (id) => {
 
   gameState.video.index = index;
   gameState.video.id = config.videos[gameState.video.index].id;
-  gameState.video.time = 0;
+  setGameStateVideoTime(0);
   gameState.video.playing = false;
 
   // Récupération dynamique de la durée
@@ -556,10 +563,20 @@ io.on("connection", (socket) => {
     gameState.video.paused = false;
   });
 
+  socket.on("previousTimeButtonClicked", () => {
+    setGameStateVideoTime(gameState.video.time - 5);
+    io.emit("gameState", gameState);
+  });
+
+  socket.on("nextTimeButtonClicked", () => {
+    setGameStateVideoTime(gameState.video.time + 5);
+    io.emit("gameState", gameState);
+  });
+
   socket.on("stopButtonClicked", () => {
     gameState.video.playing = false;
     gameState.video.paused = true;
-    gameState.video.time = 0;
+    setGameStateVideoTime(0);
 
     io.emit("gameState", gameState);
     gameState.video.paused = false;
