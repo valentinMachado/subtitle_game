@@ -105,7 +105,7 @@
     <!-- ================= LIBRARY VIEW ================= -->
     <div id="libraryView" class="viewContainer" style="display: none">
       <div class="libraryLayout">
-        <span id="libraryLabel" style="cursor: inherit">🎞️📄</span>
+        <span id="libraryLabel" style="cursor: inherit">📚🎞️📄</span>
         <select
           id="librarySelect"
           style="font-size: 30px; max-width: 100%"
@@ -466,7 +466,7 @@
             (state.clipSaves && state.clipSaves[state.video.id]) || [];
           if (!saves.length) {
             savesList.innerHTML = `
-            <em>Aucune sauvegarde de sous-titres</em>`;
+            <em>Aucune sauvegarde de sous-titres 📄</em>`;
             return;
           }
 

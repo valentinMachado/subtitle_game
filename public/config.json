@@ -413,7 +413,7 @@
           {
             "start": 37.07600000000002,
             "end": 40.40599999999995,
-            "placeholder": "Pour commencer à monter 📽️🕔 ton film."
+            "placeholder": "Pour commencer à monter 📽️🕔 ton film 🎞️"
           },
           {
             "start": 40.659000000000106,
@@ -423,7 +423,7 @@
           {
             "start": 45.57499999999982,
             "end": 48.9409999999998,
-            "placeholder": "💾📄→📁📗 sauvegarde les 📄 du 🤖 dans 📁📗!"
+            "placeholder": "💾📄→📁📗 sauvegarde les 📄 du 🤖 dans 📁📗"
           },
           {
             "start": 49.24299999999994,
@@ -473,7 +473,7 @@
           {
             "start": 37.07600000000002,
             "end": 40.40599999999995,
-            "placeholder": "Je disais donc que pour monter 📽️🕔 ton film."
+            "placeholder": "Je disais donc que pour monter 📽️🕔 ton film 🎞️"
           },
           {
             "start": 40.659000000000106,
@@ -503,7 +503,7 @@
           {
             "start": 62.70100000000002,
             "end": 64.9050000000002,
-            "placeholder": "❌🕔 retire 📁📗📄"
+            "placeholder": "❌🕔 retire 📁📗📄 de 🕔"
           },
           {
             "start": 65.57499999999982,
@@ -513,7 +513,7 @@
         ]
       },
       {
-        "name": "🎞️📄→📁📗",
+        "name": "📁📗→⚙️🤝",
         "subtitles": [
           {
             "start": 13.284000000000106,
@@ -543,7 +543,7 @@
           {
             "start": 45.57499999999982,
             "end": 48.9409999999998,
-            "placeholder": "Pour rajouter une video 🎞️📄 à la librairie 📚 va dans le dossier ./📁public/📁library_videos"
+            "placeholder": "Pour rajouter une video 📚🎞️📄 à la librairie 📚 va dans le dossier ./📁public/📁library_videos"
           },
           {
             "start": 49.24299999999994,
@@ -553,12 +553,12 @@
           {
             "start": 52.70100000000002,
             "end": 56.48199999999997,
-            "placeholder": "Pour voir les videos de la librairies 🎞️📄 va sur ⚙️📚"
+            "placeholder": "Pour voir les videos de la librairies 📚🎞️📄 va sur ⚙️📚"
           },
           {
             "start": 56.70100000000002,
             "end": 61.07400000000007,
-            "placeholder": "🎞️📄nom_video devrait etre rajouter automatiquement au jeu 😄"
+            "placeholder": "📚🎞️📄nom_video devrait etre rajouter automatiquement au jeu 😄"
           },
           {
             "start": 62.70100000000002,
@@ -568,7 +568,7 @@
           {
             "start": 65.57499999999982,
             "end": 70.2800000000002,
-            "placeholder": "Tu peux maintenant 📁📗→⚙️🤝 avec 🎞️📄nom_video !"
+            "placeholder": "Tu peux maintenant 📁📗→⚙️🤝 avec 📚🎞️📄nom_video !"
           }
         ]
       }
