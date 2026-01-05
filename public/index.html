@@ -12,7 +12,9 @@
     <div id="videoContainer">
       <div id="viewInfo">✍</div>
       <video id="gameVideo" controls playsinline></video>
-      <video id="libraryVideo" controls style="display: none"></video>
+      <video id="libraryVideo" controls style="display: none">
+        <track id="libraryVideoTrack" kind="subtitles" default />
+      </video>
       <div id="subtitleOverlayLocal" class="subtitleOverlay"></div>
       <div
         id="subtitleOverlayRemote"
@@ -68,11 +70,12 @@
             <button id="videoStateButton">🔄</button>
             <button id="nextTimeButton">⏩</button>
             <button id="stopButton">⏹️</button>
-            <button id="saveButton" disabled style="display: none">💾</button>
+            <button id="saveButton" disabled style="display: none">
+              💾📄→📗
+            </button>
             <input
               id="saveNameInput"
-              placeholder="Nom de la sauvegarde"
-              value="sous-titres"
+              placeholder="Nom 📄"
               style="display: none; max-width: 50%"
             />
           </div>
@@ -102,6 +105,7 @@
     <!-- ================= LIBRARY VIEW ================= -->
     <div id="libraryView" class="viewContainer" style="display: none">
       <div class="libraryLayout">
+        <span id="libraryLabel" style="cursor: inherit">🎞️📄</span>
         <select
           id="librarySelect"
           style="font-size: 30px; max-width: 100%"
@@ -135,20 +139,19 @@
           <input
             id="clipName"
             required
-            placeholder="Nom du clip"
+            placeholder="Nom 📗"
             pattern=".*\S.*"
             title="Le nom du clip ne peut pas être vide"
           />
-          <button id="createClip">📗</button>
+          <button id="createClip">💾📗→⚙️🤝</button>
         </div>
 
         <div
           id="libraryClipSelectContainer"
           style="display: none; align-items: center; gap: 4px"
         >
-          <span id="clipLabel" style="cursor: inherit">📗</span>
           <select id="libraryClipSelect"></select>
-          <button id="deleteClipButton" style="display: none">❌</button>
+          <button id="deleteClipButton" style="display: none">❌💾📗</button>
         </div>
       </div>
     </div>
@@ -259,6 +262,7 @@
         const viewInfo = document.getElementById("viewInfo");
         const gameVideo = document.getElementById("gameVideo");
         const libraryVideo = document.getElementById("libraryVideo");
+        const libraryVideoTrack = document.getElementById("libraryVideoTrack");
         const subtitleOverlayLocal = document.getElementById(
           "subtitleOverlayLocal"
         );
@@ -470,11 +474,11 @@
             .map((s, index) => {
               return `
         <div class="saveItem" style="display:flex; justify-content:space-between; align-items:center;">
-          <span>${s.name}</span>
+          <span>📄${s.name}</span>
           <div>
-            <button onclick="loadSave(${index})">✍</button>
-            <button onclick="deleteSave(${index})">❌</button>
-            <button onclick="selectClipToInsert('${state.video.id}', ${index})">🕔</button>
+            <button onclick="loadSave(${index})">✍📄📗</button>
+            <button onclick="deleteSave(${index})">❌📄📗</button>
+            <button onclick="selectClipToInsert('${state.video.id}', ${index})">➕📄📗→🕔</button>
           </div>
         </div>
       `;
@@ -536,8 +540,12 @@
           if (id === "playerView" || id === "remoteView") {
             socket.emit("needGameState");
           } else {
-            if (libraryVideosById.length > 0)
+            if (Object.values(libraryVideosById).length > 0) {
               libraryVideo.src = libraryVideosById[librarySelect.value].path;
+              libraryVideoTrack.src = libraryVideosById[
+                librarySelect.value
+              ].srt.replace(/\.srt$/i, ".vtt");
+            }
           }
 
           libraryClipSelectContainer.style.display =
@@ -876,7 +884,7 @@
             div.appendChild(label);
 
             const delBtn = document.createElement("button");
-            delBtn.textContent = "❌";
+            delBtn.textContent = "❌🕔";
             delBtn.style.flex = "0 0 auto"; // ne pas étirer
             delBtn.onclick = (e) => {
               e.stopPropagation();
@@ -1052,7 +1060,9 @@
                                     !p.hasBeenSelected && p.submitted
                                       ? "👋"
                                       : ""
-                                  }</span><span>${p.name}</span>
+                                  }</span><span style="margin-left: 8px">${
+                  p.name
+                }</span>
 
                                     </div>`
             )
@@ -1084,34 +1094,39 @@
         }
 
         function renderLibraryView() {
-          librarySelect.innerHTML = "";
+          const libraryVideos = Object.values(libraryVideosById);
 
-          // Regrouper les vidéos par langue
-          const videosByLang = {};
-          Object.values(libraryVideosById).forEach((v) => {
-            if (!videosByLang[v.lang]) videosByLang[v.lang] = [];
-            videosByLang[v.lang].push(v);
-          });
-
-          // Créer les optgroup
-          Object.keys(videosByLang)
-            .sort() // trier les langues par ordre alphabétique
-            .forEach((lang) => {
-              const optgroup = document.createElement("optgroup");
-              optgroup.label = lang;
-
-              // trier les vidéos par id dans chaque langue
-              videosByLang[lang]
-                .sort((a, b) => a.id.toString().localeCompare(b.id.toString()))
-                .forEach((v) => {
-                  const option = document.createElement("option");
-                  option.value = v.id;
-                  option.textContent = `${v.id}`;
-                  optgroup.appendChild(option);
-                });
-
-              librarySelect.appendChild(optgroup);
+          if (libraryVideos.length) {
+            librarySelect.innerHTML = "";
+            // Regrouper les vidéos par langue
+            const videosByLang = {};
+            Object.values(libraryVideosById).forEach((v) => {
+              if (!videosByLang[v.lang]) videosByLang[v.lang] = [];
+              videosByLang[v.lang].push(v);
             });
+
+            // Créer les optgroup
+            Object.keys(videosByLang)
+              .sort() // trier les langues par ordre alphabétique
+              .forEach((lang) => {
+                const optgroup = document.createElement("optgroup");
+                optgroup.label = lang;
+
+                // trier les vidéos par id dans chaque langue
+                videosByLang[lang]
+                  .sort((a, b) =>
+                    a.id.toString().localeCompare(b.id.toString())
+                  )
+                  .forEach((v) => {
+                    const option = document.createElement("option");
+                    option.value = v.id;
+                    option.textContent = `${v.id}`;
+                    optgroup.appendChild(option);
+                  });
+
+                librarySelect.appendChild(optgroup);
+              });
+          }
 
           libraryClipSelect.innerHTML = "";
 
@@ -1146,6 +1161,9 @@
 
         librarySelect.onchange = () => {
           libraryVideo.src = libraryVideosById[librarySelect.value].path;
+          libraryVideoTrack.src = libraryVideosById[
+            librarySelect.value
+          ].srt.replace(/\.srt$/i, ".vtt");
         };
 
         /* ================= SAVE BUTTON ================= */
@@ -1157,9 +1175,9 @@
 
           const name = saveNameInput.value.trim();
           if (!name || !lastGameState) {
-            saveButton.textContent = "❌ Nom invalide";
+            saveButton.textContent = "❌";
             setTimeout(() => {
-              saveButton.textContent = "💾";
+              saveButton.textContent = "💾📄→📗";
               saveTriggered = false;
             }, 1000);
             return;
@@ -1169,7 +1187,7 @@
           if (!selectedPlayerId || !players[selectedPlayerId]) {
             saveButton.textContent = "❌";
             setTimeout(() => {
-              saveButton.textContent = "💾";
+              saveButton.textContent = "💾📄→📗";
               saveTriggered = false;
             }, 1000);
             return;
@@ -1179,7 +1197,7 @@
           if (!subtitles || !subtitles.length) {
             saveButton.textContent = "❌";
             setTimeout(() => {
-              saveButton.textContent = "💾";
+              saveButton.textContent = "💾📄→📗";
               saveTriggered = false;
             }, 1000);
             return;
@@ -1197,7 +1215,7 @@
           // Feedback utilisateur
           saveButton.textContent = "✅";
           setTimeout(() => {
-            saveButton.textContent = "💾";
+            saveButton.textContent = "💾📄→📗";
             saveTriggered = false;
           }, 1000);
         };
@@ -1206,8 +1224,7 @@
         saveButton.addEventListener("click", saveSubtitles);
 
         renderButton.addEventListener("click", () => {
-          if (confirm("Etes-vous sur de vouloir lancer un rendu ?"))
-            socket.emit("render");
+          if (confirm("📽️ ?")) socket.emit("render");
         });
         goToRender.addEventListener("click", () => {
           window.location.href = "/render/final.mp4";

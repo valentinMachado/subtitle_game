@@ -31,6 +31,7 @@ const ffprobePath = resolveBin("ffprobe");
 });
 
 // ---------- CHEMINS UTILS ----------
+const libraryVttPath = (id) => path.join(libraryRoot, id, `${id}.vtt`);
 const libraryVideoPath = (libraryVideoId) =>
   path.join(
     publicDir,
@@ -46,8 +47,22 @@ const srtFilePath = (libraryVideoId) =>
     `${libraryVideoId}.srt`
   );
 const clipOutputPath = (clipId) =>
-  path.join(publicDir, "videos", `${clipId}.mp4`);
+  path.join(publicDir, "clips", `${clipId}.mp4`);
 const configPath = path.join(publicDir, "config.json");
+
+// scan
+const libraryRoot = path.join(publicDir, "library_videos");
+
+const librarySrtPath = (libraryVideoId) =>
+  path.join(
+    publicDir,
+    "library_videos",
+    libraryVideoId,
+    `${libraryVideoId}.srt`
+  );
+
+const libraryVideoExists = (id) =>
+  fs.existsSync(libraryVideoPath(id)) && fs.existsSync(librarySrtPath(id));
 
 // Exemple pour charger le config
 let config = {};
@@ -110,6 +125,32 @@ function clipSubtitles(subtitles, clipStart, clipEnd) {
       placeholder: index + 1 + ": " + s.placeholder,
     }));
 }
+
+const generateVttFromSrt = (srtPath, vttPath) => {
+  return new Promise((resolve, reject) => {
+    if (fs.existsSync(vttPath)) return resolve(); // déjà généré
+
+    const args = [
+      "-y",
+      "-i",
+      srtPath.replace(/\\/g, "/"),
+      vttPath.replace(/\\/g, "/"),
+    ];
+
+    const ff = spawn(ffmpegPath, args, {
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+
+    ff.stderr.on("data", (data) =>
+      console.log(`[ffmpeg][vtt] ${data.toString()}`)
+    );
+
+    ff.on("close", (code) => {
+      if (code === 0) resolve();
+      else reject(new Error("FFmpeg SRT→VTT failed"));
+    });
+  });
+};
 
 // ---------- PROCESS VIDEO ----------
 async function processVideo(inputPath, outputPath, options = {}) {
@@ -178,7 +219,7 @@ async function addVideoToConfig(
   const newVideo = {
     id: clipId,
     lang,
-    path: `videos/${clipId}.mp4`,
+    path: `clips/${clipId}.mp4`,
     subtitles,
     startTime: start,
     endTime: end,
@@ -434,7 +475,7 @@ const loadVideoId = async (id) => {
       }
     );
 
-    console.log(Object.values(gameState.players).map((p) => p.name));
+    // console.log(Object.values(gameState.players).map((p) => p.name));
   }
 
   io.emit("gameState", gameState);
@@ -647,6 +688,8 @@ io.on("connection", (socket) => {
       } catch (err) {
         console.error(`❌ Erreur lors de la suppression de la vidéo :`, err);
       }
+    } else {
+      console.log(`⚠️ Vidéo "${clipId}" introuvable : ${videoPath}`);
     }
 
     // Supprime le clip de la config
@@ -766,3 +809,136 @@ const reloadConfig = async () => {
   }
 };
 fs.watch(configPath, () => reloadConfig());
+
+const validateLibraryVideos = async () => {
+  if (!Array.isArray(config.library_videos)) return;
+
+  const validEntries = [];
+
+  for (const entry of config.library_videos) {
+    const { id, path: videoPath, srt: srtPath } = entry;
+
+    if (!id || !videoPath || !srtPath) {
+      console.warn("❌ Entrée invalide (champ manquant):", entry);
+      continue;
+    }
+
+    const folderPath = path.join(libraryRoot, id);
+    const expectedVideo = path.join(folderPath, `${id}.mp4`);
+    const expectedSrt = path.join(folderPath, `${id}.srt`);
+
+    const resolvedVideoPath = path.resolve(publicDir, videoPath);
+    const resolvedSrtPath = path.resolve(publicDir, srtPath);
+
+    const isValid =
+      folderPath === path.dirname(resolvedVideoPath) &&
+      folderPath === path.dirname(resolvedSrtPath) &&
+      expectedVideo === resolvedVideoPath &&
+      expectedSrt === resolvedSrtPath &&
+      fs.existsSync(expectedVideo) &&
+      fs.existsSync(expectedSrt);
+
+    if (!isValid) {
+      console.warn(`🗑️ Entrée corrompue supprimée : ${id}`);
+      continue;
+    }
+
+    validEntries.push(entry);
+  }
+
+  // Réécriture si changement
+  if (validEntries.length !== config.library_videos.length) {
+    config.library_videos = validEntries;
+
+    await fs.promises.writeFile(
+      configPath,
+      JSON.stringify(config, null, 2),
+      "utf-8"
+    );
+
+    await reloadConfig();
+  }
+};
+
+const knownLibraryVideos = new Set();
+
+const scanLibraryVideos = async () => {
+  let dirs;
+  try {
+    dirs = await fs.promises.readdir(libraryRoot, { withFileTypes: true });
+  } catch {
+    return;
+  }
+
+  let updated = false;
+
+  if (!Array.isArray(config.library_videos)) {
+    config.library_videos = [];
+  }
+
+  for (const dir of dirs) {
+    if (!dir.isDirectory()) continue;
+
+    const id = dir.name;
+
+    if (knownLibraryVideos.has(id)) continue;
+    if (!libraryVideoExists(id)) continue;
+
+    const srtPath = librarySrtPath(id);
+    const vttPath = libraryVttPath(id);
+
+    try {
+      await generateVttFromSrt(srtPath, vttPath);
+    } catch (err) {
+      console.error(`❌ VTT generation failed for ${id}`, err);
+      continue;
+    }
+
+    if (config.library_videos.some((v) => v.id === id)) {
+      knownLibraryVideos.add(id);
+      console.log(`📥 détectée : ${id}`);
+      continue;
+    }
+
+    console.log(`📥 Nouvelle vidéo de librairie détectée : ${id}`);
+
+    config.library_videos.push({
+      id,
+      lang: "langue",
+      path: `./library_videos/${id}/${id}.mp4`,
+      srt: `./library_videos/${id}/${id}.srt`,
+      vtt: `./library_videos/${id}/${id}.vtt`,
+    });
+
+    knownLibraryVideos.add(id);
+    updated = true;
+  }
+
+  if (!updated) return;
+
+  await fs.promises.writeFile(
+    configPath,
+    JSON.stringify(config, null, 2),
+    "utf-8"
+  );
+
+  await reloadConfig();
+};
+
+let libraryScanTimeout = null;
+
+if (!fs.existsSync(libraryRoot)) {
+  fs.mkdirSync(libraryRoot, { recursive: true });
+}
+
+fs.watch(libraryRoot, { recursive: true }, () => {
+  clearTimeout(libraryScanTimeout);
+  libraryScanTimeout = setTimeout(async () => {
+    await scanLibraryVideos();
+    await validateLibraryVideos();
+  }, 1000);
+});
+
+// Scan initial au démarrage
+validateLibraryVideos();
+scanLibraryVideos();

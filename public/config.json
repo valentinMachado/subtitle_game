@@ -167,7 +167,7 @@
       {
         "start": 17.19900000000007,
         "end": 23.06600000000003,
-        "text": "Très bien, vous etes ici sur la vue édition ✍",
+        "text": "Très bien, vous etes ici sur la vue édition ⚙️✍",
         "placeholder": "3 За то, что признался, подарю тебе обещанное."
       },
       {
@@ -213,7 +213,7 @@
       {
         "start": 57.07400000000007,
         "end": 60.15599999999995,
-        "text": "Tu es donc sur la vue édition ✍",
+        "text": "Tu es donc sur la vue édition ⚙️✍",
         "placeholder": "11 и земной поклон отдать."
       },
       {
@@ -235,13 +235,13 @@
       {
         "start": 71.65699999999993,
         "end": 75.06999999999994,
-        "text": "Sur la vue 📚 tu peux créer des clips 📗",
+        "text": "Mais pour commencer clique sur 📄",
         "placeholder": "15 Медведь мне будет кланяться,"
       },
       {
         "start": 75.2829999999999,
         "end": 78.44599999999991,
-        "text": "Mais pour l'instant clique sur le bouton 📄",
+        "text": "Ceci poste les sous-titres 📄 sur la vue partagée ⚙️🤝",
         "placeholder": "16 а согнётся твоя спина."
       }
     ],
@@ -262,7 +262,7 @@
           {
             "start": 17.19900000000007,
             "end": 23.06600000000003,
-            "placeholder": "Très bien, vous etes ici sur la vue partagée 🤝"
+            "placeholder": "Très bien, vous etes ici sur la vue partagée ⚙️🤝"
           },
           {
             "start": 30.906999999999925,
@@ -297,7 +297,7 @@
           {
             "start": 53.32400000000007,
             "end": 56.819999999999936,
-            "placeholder": "Tout d'abord sur 🤝 la video est synchronisé pour chaque 🤖"
+            "placeholder": "Tout d'abord sur ⚙️🤝 la video est synchronisé pour chaque 🤖"
           },
           {
             "start": 57.07400000000007,
@@ -393,7 +393,7 @@
     ],
     "players": [
       {
-        "name": "Cliquez sur ▶️",
+        "name": "💾📄→📗",
         "subtitles": [
           {
             "start": 13.284000000000106,
@@ -418,12 +418,12 @@
           {
             "start": 40.659000000000106,
             "end": 45.36400000000003,
-            "placeholder": "Tu dois sauvegarder des sous-titres 📄 pour un 📗 clip."
+            "placeholder": "Tu dois sauvegarder des sous-titres dans un clip 📄📗"
           },
           {
             "start": 45.57499999999982,
             "end": 48.9409999999998,
-            "placeholder": "💾 enregistrera les sous-titres du 🤖 sélectionné"
+            "placeholder": "💾📄→📗 sauvegarde les 📄📗 du 🤖 sélectionné !"
           },
           {
             "start": 49.24299999999994,
@@ -438,27 +438,27 @@
           {
             "start": 56.70100000000002,
             "end": 61.07400000000007,
-            "placeholder": "✍ permet de copier ces sous-titres dans ta vue ✍"
+            "placeholder": "✍📄📗 permet de copier ces sous-titres dans ⚙️✍"
           },
           {
             "start": 62.70100000000002,
             "end": 64.9050000000002,
-            "placeholder": "❌ de les supprimer"
+            "placeholder": "❌📄📗 de les supprimer"
           },
           {
             "start": 65.57499999999982,
             "end": 70.2800000000002,
-            "placeholder": "pour 🕔 sélectionne 🤖 Joueur 851 et ⏹️ → ▶️"
+            "placeholder": "pour ➕📄📗→🕔 sélectionne 🤖 ➕📄📗→🕔 et ⏹️ → ▶️"
           }
         ]
       },
       {
-        "name": "Joueur 851",
+        "name": "➕📄📗→🕔",
         "subtitles": [
           {
             "start": 13.284000000000106,
             "end": 18.652999999999793,
-            "placeholder": "Il y a quelqu'un ? j'ai ▶️ 🤖 Joueur 851, comment fonctionne 🕔?"
+            "placeholder": "Il y a quelqu'un ? j'ai ▶️ 🤖 ➕📄📗→🕔, comment fonctionne ➕📄📗→🕔 ?"
           },
           {
             "start": 31.076000000000022,
@@ -478,12 +478,12 @@
           {
             "start": 40.659000000000106,
             "end": 45.36400000000003,
-            "placeholder": "Mais oui tout d'abord clique sur 🕔"
+            "placeholder": "Mais oui tout d'abord clique sur ➕📄📗→🕔"
           },
           {
             "start": 45.57499999999982,
             "end": 48.9409999999998,
-            "placeholder": "Ca devrait faire apparaitre un ➕ sur la 🕔 timeline."
+            "placeholder": "Ca devrait faire apparaitre un ➕ sur la timeline 🕔"
           },
           {
             "start": 49.24299999999994,
@@ -493,22 +493,82 @@
           {
             "start": 52.70100000000002,
             "end": 56.48199999999997,
-            "placeholder": "Je viens de cliquer sur ➕, ca a rajouté le clip 📗 sous-titrés 📄 à 🕔"
+            "placeholder": "Je viens de cliquer sur ➕, ca a rajouté le clip 📄📗 à 🕔"
           },
           {
             "start": 56.70100000000002,
             "end": 61.07400000000007,
-            "placeholder": "Oui et dans la vue 📚 tu peux créer de nouveau 📗"
+            "placeholder": "Oui et tu peux en ajouter des différents."
           },
           {
             "start": 62.70100000000002,
             "end": 64.9050000000002,
-            "placeholder": "❌ le supprime de 🕔"
+            "placeholder": "❌🕔 pour le retirer"
           },
           {
             "start": 65.57499999999982,
             "end": 70.2800000000002,
             "placeholder": "📽️ lance un rendu de 🕔 visible sur 🎞️"
+          }
+        ]
+      },
+      {
+        "name": "🎞️📄→⚙️📚",
+        "subtitles": [
+          {
+            "start": 13.284000000000106,
+            "end": 18.652999999999793,
+            "placeholder": "Bon ca suffit on commence à le connaitre ce clip, j'en ai marre..."
+          },
+          {
+            "start": 31.076000000000022,
+            "end": 33.11299999999983,
+            "placeholder": "Je vois pas de quoi tu parles."
+          },
+          {
+            "start": 35.61700000000019,
+            "end": 36.860999999999876,
+            "placeholder": "Mon jeu est si puisssant !"
+          },
+          {
+            "start": 37.07600000000002,
+            "end": 40.40599999999995,
+            "placeholder": "Mais tu peux 💾📄→📗 et ensuite cliquer ✍📄📗"
+          },
+          {
+            "start": 40.659000000000106,
+            "end": 45.36400000000003,
+            "placeholder": "pour copier ces sous-titres dans ⚙️✍ pour mieux 🔎"
+          },
+          {
+            "start": 45.57499999999982,
+            "end": 48.9409999999998,
+            "placeholder": "⚙️📚 est accessible avec ⚙️→📚, par defaut il n'y a pas de 🎞️📄"
+          },
+          {
+            "start": 49.24299999999994,
+            "end": 51.860999999999876,
+            "placeholder": "Pour rajouter un 🎞️📄→⚙️📚 va dans le dossier ./📁public/📁library_videos"
+          },
+          {
+            "start": 52.70100000000002,
+            "end": 56.48199999999997,
+            "placeholder": "Ajoute 📁ma_video et dedans place 🎞️ma_video.mp4 et 📄ma_video.srt"
+          },
+          {
+            "start": 56.70100000000002,
+            "end": 61.07400000000007,
+            "placeholder": "🎞️📄ma_video devrait etre rajouter automatiquement au jeu."
+          },
+          {
+            "start": 62.70100000000002,
+            "end": 64.9050000000002,
+            "placeholder": "❗️ l'identifiant (ma_video) doit etre le meme partout ❗️"
+          },
+          {
+            "start": 65.57499999999982,
+            "end": 70.2800000000002,
+            "placeholder": "Tu peux maintenant 💾📗→⚙️🤝 depuis 🎞️📄ma_video !"
           }
         ]
       }
