@@ -192,7 +192,7 @@ async function addVideoToConfig(
   end,
   libraryVideoId
 ) {
-  let config = { videos: [] };
+  let config = { clips: [] };
   if (fs.existsSync(configPath)) {
     try {
       config = JSON.parse(await fs.promises.readFile(configPath, "utf-8"));
@@ -224,9 +224,9 @@ async function addVideoToConfig(
     startTime: start,
     endTime: end,
   };
-  const existingIndex = config.videos.findIndex((v) => clipId === v.id);
-  if (existingIndex >= 0) config.videos[existingIndex] = newVideo;
-  else config.videos.push(newVideo);
+  const existingIndex = config.clips.findIndex((v) => clipId === v.id);
+  if (existingIndex >= 0) config.clips[existingIndex] = newVideo;
+  else config.clips.push(newVideo);
 
   try {
     await fs.promises.writeFile(
@@ -431,20 +431,20 @@ const currentTemplatePlayerIds = [];
 const isTemplate = (id) => id.startsWith("template-");
 
 const loadVideoId = async (id) => {
-  let index = config.videos.findIndex((v) => v.id === id);
+  let index = config.clips.findIndex((v) => v.id === id);
   if (index === -1) {
     console.warn(`⚠️ Video "${id}" non trouvée`);
     index = 0;
   }
 
   gameState.video.index = index;
-  gameState.video.id = config.videos[gameState.video.index].id;
+  gameState.video.id = config.clips[gameState.video.index].id;
   setGameStateVideoTime(0);
   gameState.video.playing = false;
 
   try {
     gameState.video.duration = await getVideoDuration(
-      path.join(publicDir, config.videos[gameState.video.index]?.path)
+      path.join(publicDir, config.clips[gameState.video.index]?.path)
     );
   } catch (e) {
     console.error(e);
@@ -457,7 +457,7 @@ const loadVideoId = async (id) => {
     p.hasBeenSelected = false;
     p.subtitles = isTemplate(gameState.video.id)
       ? config[gameState.video.id].defaultSubtitles
-      : config.videos[gameState.video.index].subtitles;
+      : config.clips[gameState.video.index].subtitles;
   });
 
   if (isTemplate(gameState.video.id) && config[gameState.video.id]) {
@@ -501,12 +501,12 @@ const render = async () => {
       const videoId = gameState.timeline[index].videoId;
       const subtitles = gameState.timeline[index].subtitles;
 
-      const videoIndex = config.videos.findIndex((v) => v.id === videoId);
+      const videoIndex = config.clips.findIndex((v) => v.id === videoId);
       if (videoIndex === -1) continue;
 
       const inputVideoPath = path.join(
         publicDir,
-        config.videos[videoIndex].path
+        config.clips[videoIndex].path
       );
 
       console.log("Rendering subtitles for video", videoId, "at index", index);
@@ -560,7 +560,7 @@ io.on("connection", (socket) => {
         hasBeenSelected: true, // wait submission of srt
         subtitles: isTemplate(gameState.video.id)
           ? config[gameState.video.id].defaultSubtitles
-          : config.videos[gameState.video.index].subtitles,
+          : config.clips[gameState.video.index].subtitles,
       };
 
       if (gameState.players[playerId].subtitles.length === 0) {
@@ -648,12 +648,12 @@ io.on("connection", (socket) => {
   // ----- Video navigation -----
 
   socket.on("nextVideo", () => {
-    loadVideoId((gameState.video.index + 1) % config.videos.length);
+    loadVideoId((gameState.video.index + 1) % config.clips.length);
   });
 
   socket.on("previousVideo", () => {
     loadVideoId(
-      (gameState.video.index - 1 + config.videos.length) % config.videos.length
+      (gameState.video.index - 1 + config.clips.length) % config.clips.length
     );
   });
 
@@ -670,7 +670,7 @@ io.on("connection", (socket) => {
     }
 
     const config = JSON.parse(fs.readFileSync(configPath, "utf-8"));
-    const index = config.videos.findIndex((v) => v.id === clipId);
+    const index = config.clips.findIndex((v) => v.id === clipId);
 
     if (index === -1) {
       console.warn(`⚠️ Clip "${clipId}" non trouvé dans config.json`);
@@ -678,7 +678,7 @@ io.on("connection", (socket) => {
     }
 
     // Récupère le chemin de la vidéo à supprimer
-    const videoPath = path.resolve("./public", config.videos[index].path);
+    const videoPath = path.resolve("./public", config.clips[index].path);
 
     // Supprime la vidéo si elle existe
     if (fs.existsSync(videoPath)) {
@@ -693,7 +693,7 @@ io.on("connection", (socket) => {
     }
 
     // Supprime le clip de la config
-    config.videos.splice(index, 1);
+    config.clips.splice(index, 1);
 
     try {
       fs.writeFileSync(configPath, JSON.stringify(config, null, 2), "utf-8");

@@ -70,14 +70,14 @@
             <button id="videoStateButton">🔄</button>
             <button id="nextTimeButton">⏩</button>
             <button id="stopButton">⏹️</button>
-            <button id="saveButton" disabled style="display: none">
-              💾📄→📁📗
-            </button>
             <input
               id="saveNameInput"
               placeholder="Nom 📄"
               style="display: none; max-width: 50%"
             />
+            <button id="saveButton" disabled style="display: none">
+              💾📄→📁📗
+            </button>
           </div>
           <div id=""></div>
           <div
@@ -344,7 +344,7 @@
 
         /* ================= CONFIG ================= */
         const cfg = await fetch("/config.json").then((r) => r.json());
-        videosById = Object.fromEntries(cfg.videos.map((v) => [v.id, v]));
+        videosById = Object.fromEntries(cfg.clips.map((v) => [v.id, v]));
         libraryVideosById = Object.fromEntries(
           cfg.library_videos.map((v) => [v.id, v])
         );
