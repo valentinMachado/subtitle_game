@@ -46,7 +46,7 @@
           "
         >
           <div>
-            <span id="clipLabel" style="cursor: inherit">📗</span>
+            <span id="clipLabel" style="cursor: inherit">📁📗</span>
             <select id="clipSelect"></select>
           </div>
           <div
@@ -71,7 +71,7 @@
             <button id="nextTimeButton">⏩</button>
             <button id="stopButton">⏹️</button>
             <button id="saveButton" disabled style="display: none">
-              💾📄→📗
+              💾📄→📁📗
             </button>
             <input
               id="saveNameInput"
@@ -139,11 +139,11 @@
           <input
             id="clipName"
             required
-            placeholder="Nom 📗"
+            placeholder="Nom 📁📗"
             pattern=".*\S.*"
             title="Le nom du clip ne peut pas être vide"
           />
-          <button id="createClip">💾📗→⚙️🤝</button>
+          <button id="createClip">📁📗→⚙️🤝</button>
         </div>
 
         <div
@@ -151,7 +151,7 @@
           style="display: none; align-items: center; gap: 4px"
         >
           <select id="libraryClipSelect"></select>
-          <button id="deleteClipButton" style="display: none">❌💾📗</button>
+          <button id="deleteClipButton" style="display: none">❌📁📗</button>
         </div>
       </div>
     </div>
@@ -251,7 +251,7 @@
           </div>
         </div>
 
-        <button id="renderButton" disabled style="display: none">📽️</button>
+        <button id="renderButton" disabled style="display: none">📽️🕔</button>
         <button id="goToRender" disabled style="display: none">🎞️</button>
       </div>
     </div>
@@ -476,9 +476,9 @@
         <div class="saveItem" style="display:flex; justify-content:space-between; align-items:center;">
           <span>📄${s.name}</span>
           <div>
-            <button onclick="loadSave(${index})">✍📄📗</button>
-            <button onclick="deleteSave(${index})">❌📄📗</button>
-            <button onclick="selectClipToInsert('${state.video.id}', ${index})">➕📄📗→🕔</button>
+            <button onclick="loadSave(${index})">✍</button>
+            <button onclick="deleteSave(${index})">❌</button>
+            <button onclick="selectClipToInsert('${state.video.id}', ${index})">➕→🕔</button>
           </div>
         </div>
       `;
@@ -1177,7 +1177,7 @@
           if (!name || !lastGameState) {
             saveButton.textContent = "❌";
             setTimeout(() => {
-              saveButton.textContent = "💾📄→📗";
+              saveButton.textContent = "💾📄→📁📗";
               saveTriggered = false;
             }, 1000);
             return;
@@ -1187,7 +1187,7 @@
           if (!selectedPlayerId || !players[selectedPlayerId]) {
             saveButton.textContent = "❌";
             setTimeout(() => {
-              saveButton.textContent = "💾📄→📗";
+              saveButton.textContent = "💾📄→📁📗";
               saveTriggered = false;
             }, 1000);
             return;
@@ -1197,7 +1197,7 @@
           if (!subtitles || !subtitles.length) {
             saveButton.textContent = "❌";
             setTimeout(() => {
-              saveButton.textContent = "💾📄→📗";
+              saveButton.textContent = "💾📄→📁📗";
               saveTriggered = false;
             }, 1000);
             return;
@@ -1215,7 +1215,7 @@
           // Feedback utilisateur
           saveButton.textContent = "✅";
           setTimeout(() => {
-            saveButton.textContent = "💾📄→📗";
+            saveButton.textContent = "💾📄→📁📗";
             saveTriggered = false;
           }, 1000);
         };
@@ -1224,7 +1224,7 @@
         saveButton.addEventListener("click", saveSubtitles);
 
         renderButton.addEventListener("click", () => {
-          if (confirm("📽️ ?")) socket.emit("render");
+          if (confirm("📽️🕔 ?")) socket.emit("render");
         });
         goToRender.addEventListener("click", () => {
           window.location.href = "/render/final.mp4";
