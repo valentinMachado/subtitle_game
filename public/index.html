@@ -321,10 +321,6 @@
         let lastAppliedVideoState = { id: null, time: null };
         let lastGameState = null;
 
-        function savesKey(videoId) {
-          return `savedSubs_${videoId}`;
-        }
-
         function isMobile() {
           return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
             navigator.userAgent
@@ -388,7 +384,7 @@
         function loadLocalVideo(state, videoCfg) {
           gameVideo.src = videoCfg.path;
           gameVideo.load();
-          playerSubtitles = null;
+          playerSubtitles = [];
         }
 
         function initPlayerSubtitles(state, videoCfg) {
@@ -943,7 +939,8 @@
             loadLocalVideo(state, videoCfg);
           }
 
-          if (!playerSubtitles) initPlayerSubtitles(state, videoCfg);
+          if (playerSubtitles.length === 0)
+            initPlayerSubtitles(state, videoCfg);
 
           renderClipSelect(state.video.id);
 
@@ -979,7 +976,8 @@
             );
             if (!stillExists) selectedClipToInsert = null;
           }
-          timelineClips = state.timeline; // mise à jour
+
+          timelineClips = structuredClone(state.timeline);
 
           renderTimeline();
           renderSaves();

@@ -64,11 +64,99 @@ const librarySrtPath = (libraryVideoId) =>
 const libraryVideoExists = (id) =>
   fs.existsSync(libraryVideoPath(id)) && fs.existsSync(librarySrtPath(id));
 
-// Exemple pour charger le config
+// ---------- GAMESTATE ----------
+const gameState = {
+  video: {
+    id: null,
+    index: 0,
+    duration: 0,
+    time: 0,
+    playing: false,
+    playerSelected: false,
+    paused: false,
+  },
+  players: {},
+  emoticons: {},
+  clipSaves: {},
+  timeline: [],
+  renderUrl: null,
+  finishedRender: false,
+  receivedSubtitles: false,
+};
+
+const setGameStateVideoTime = (t) => {
+  gameState.video.time = Math.max(
+    0,
+    Math.min(gameState.video.duration, t + 0.01)
+  );
+};
+
+setInterval(() => {
+  if (gameState.video.playing)
+    setGameStateVideoTime(gameState.video.time + 0.5);
+}, 500);
+
+// ---------- CONFIGURATION ----------
 let config = {};
+
+const loadClipSavesFromConfig = () => {
+  gameState.clipSaves = {};
+
+  if (!config.clipSaves || typeof config.clipSaves !== "object") return;
+
+  const validClipIds = new Set(config.clips.map((c) => c.id));
+
+  for (const [clipId, saves] of Object.entries(config.clipSaves)) {
+    if (!validClipIds.has(clipId)) {
+      console.warn(`🗑️ clipSaves ignoré (clip inexistant) : ${clipId}`);
+      continue;
+    }
+
+    if (Array.isArray(saves)) {
+      gameState.clipSaves[clipId] = saves;
+    }
+  }
+};
+
+const saveClipSavesToConfig = async () => {
+  config.clipSaves = gameState.clipSaves;
+
+  await fs.promises.writeFile(
+    configPath,
+    JSON.stringify(config, null, 2),
+    "utf-8"
+  );
+};
+
+const validateClipSavesAgainstConfig = () => {
+  if (!gameState.clipSaves || typeof gameState.clipSaves !== "object") return;
+
+  const validClipIds = new Set(config.clips.map((c) => c.id));
+
+  let removed = false;
+
+  Object.keys(gameState.clipSaves).forEach((videoId) => {
+    if (!validClipIds.has(videoId)) {
+      console.warn(
+        `🗑️ clipSaves orphelin supprimé (clip inexistant) : ${videoId}`
+      );
+      delete gameState.clipSaves[videoId];
+      removed = true;
+    }
+  });
+
+  if (removed) {
+    gameState.timeline = gameState.timeline.filter((clip) =>
+      validClipIds.has(clip.videoId)
+    );
+    io.emit("gameState", gameState);
+  }
+};
+
 if (fs.existsSync(configPath)) {
   try {
     config = JSON.parse(fs.readFileSync(configPath, "utf-8"));
+    loadClipSavesFromConfig();
   } catch (err) {
     console.error("❌ Impossible de parser config.json :", err);
   }
@@ -365,38 +453,6 @@ const renderSubtitles = async (inputVideoPath, subtitles, index) => {
   });
 };
 
-// ---------- GAMESTATE ----------
-const gameState = {
-  video: {
-    id: null,
-    index: 0,
-    duration: 0,
-    time: 0,
-    playing: false,
-    playerSelected: false,
-    paused: false,
-  },
-  players: {},
-  emoticons: {},
-  clipSaves: {},
-  timeline: [],
-  renderUrl: null,
-  finishedRender: false,
-  receivedSubtitles: false,
-};
-
-const setGameStateVideoTime = (t) => {
-  gameState.video.time = Math.max(
-    0,
-    Math.min(gameState.video.duration, t + 0.01)
-  );
-};
-
-setInterval(() => {
-  if (gameState.video.playing)
-    setGameStateVideoTime(gameState.video.time + 0.5);
-}, 500);
-
 // ---------- EXPRESS + SOCKET.IO ----------
 const app = express();
 
@@ -536,6 +592,7 @@ const render = async () => {
 };
 
 loadVideoId("template-1");
+validateClipSavesAgainstConfig();
 
 // ---------- SOCKETS ----------
 io.on("connection", (socket) => {
@@ -591,31 +648,40 @@ io.on("connection", (socket) => {
     io.emit("gameState", gameState);
   });
 
-  socket.on("deleteClipSave", ({ videoId, index }) => {
-    if (!gameState.clipSaves?.[videoId]) return;
+  socket.on("deleteClipSave", async ({ videoId, index }) => {
+    const saves = gameState.clipSaves?.[videoId];
+    if (!saves) return;
 
-    gameState.clipSaves[videoId].splice(index, 1);
+    saves.splice(index, 1);
 
-    // supprime de la timeline tous les clips qui ont le même nom et videoId
+    if (saves.length === 0) {
+      delete gameState.clipSaves[videoId];
+    }
+
+    // Nettoyage timeline
     gameState.timeline = gameState.timeline.filter(
       (clip) => !(clip.videoId === videoId && clip.index === index)
     );
 
+    await saveClipSavesToConfig();
+
     io.emit("gameState", gameState);
   });
 
-  socket.on("saveRemoteSubtitles", ({ videoId, name, subtitles }) => {
-    if (!gameState.video || videoId !== gameState.video.id) return;
+  socket.on("saveRemoteSubtitles", async ({ videoId, name, subtitles }) => {
+    if (!config.clips.some((c) => c.id === videoId)) {
+      console.warn(`❌ Tentative de save sur clip inexistant : ${videoId}`);
+      return;
+    }
 
-    if (!gameState.clipSaves) gameState.clipSaves = {};
-    if (!gameState.clipSaves[videoId]) gameState.clipSaves[videoId] = [];
+    if (!gameState.clipSaves[videoId]) {
+      gameState.clipSaves[videoId] = [];
+    }
 
-    gameState.clipSaves[videoId].push({
-      name,
-      subtitles,
-    });
+    gameState.clipSaves[videoId].push({ name, subtitles });
 
-    // 🔁 On broadcast le gamestate mis à jour
+    await saveClipSavesToConfig();
+
     io.emit("gameState", gameState);
   });
 
@@ -696,6 +762,7 @@ io.on("connection", (socket) => {
     config.clips.splice(index, 1);
 
     try {
+      delete config.clipSaves?.[clipId];
       fs.writeFileSync(configPath, JSON.stringify(config, null, 2), "utf-8");
       console.log(`✅ Clip "${clipId}" supprimé de config.json`);
     } catch (err) {
@@ -802,6 +869,11 @@ const reloadConfig = async () => {
   try {
     const raw = await fs.promises.readFile(configPath, "utf-8");
     config = JSON.parse(raw);
+
+    loadClipSavesFromConfig();
+
+    validateClipSavesAgainstConfig(); // 👈 IMPORTANT
+
     loadVideoId(gameState.video.id);
     io.emit("reload");
   } catch (e) {
