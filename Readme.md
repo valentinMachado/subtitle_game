@@ -18,31 +18,3 @@ Une console va s’ouvrir et afficher les logs du serveur.
 
 Ouvrez votre navigateur et allez à l’adresse :
 http://localhost:3000 et lisez la video pour démarrer le tutoriel !
-
-## Rajouter des videos dans la librairie
-
-Ajouter le dossier `library_videos/` dans `public/` (s'il n'existe pas deja)
-
-Créer un dossier avec cette structure:
-
-```
-nom_video/
-├─ nom_video.srt
-├─ nom_video.mp4
-```
-
-Puis dans `public/config.json` à la fin du fichier dans `library_videos`, ajouter:
-
-```
-"library_videos": [
-    {
-      ... une autre video
-    },
-    {
-      "id": "nom_video",
-      "lang": "la langue de l'audio",
-      "path": "./library_videos/nom_video/nom_video.mp4",
-      "srt": "./library_videos/nom_video/nom_video.srt"
-    }
-  ]
-```
