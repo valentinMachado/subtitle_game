@@ -7,10 +7,13 @@ Assurez-vous que le dossier `public/` est au même niveau que l’exécutable `s
 ```
 subtitle_game.exe
 public/
-├─ config.json
-├─ videos/
+├─ clips/
 ├─ library_videos/
+├─ render/
+├─ sounds/
 └─ vendor/
+└─ config.json
+└─ ...
 ```
 
 Double-cliquez sur `subtitle_game.exe` pour démarrer le serveur.
