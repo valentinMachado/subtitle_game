@@ -167,7 +167,7 @@
       {
         "start": 17.19900000000007,
         "end": 23.06600000000003,
-        "text": "Très bien, vous etes ici sur la vue édition ⚙️✍",
+        "text": "Très bien, vous etes ici sur la vue écriture ⚙️✍",
         "placeholder": "3 За то, что признался, подарю тебе обещанное."
       },
       {
@@ -213,13 +213,13 @@
       {
         "start": 57.07400000000007,
         "end": 60.15599999999995,
-        "text": "Tu es donc sur la vue édition ⚙️✍",
+        "text": "Tu es donc sur la vue écriture ⚙️✍",
         "placeholder": "11 и земной поклон отдать."
       },
       {
         "start": 60.365999999999985,
         "end": 63.28099999999995,
-        "placeholder": "Une autre fois le champignon, j'ai des sous titres à écrire."
+        "placeholder": "Une autre fois le champignon, j'ai des sous titres 📄 à écrire ✍"
       },
       {
         "start": 63.656999999999925,
@@ -247,7 +247,7 @@
     ],
     "players": [
       {
-        "name": "Cliquez ici puis sur ▶️",
+        "name": "Cliquez sur moi 🤖 puis sur ▶️",
         "subtitles": [
           {
             "start": 4.3659999999999854,
@@ -393,7 +393,7 @@
     ],
     "players": [
       {
-        "name": "💾📄→📁📗",
+        "name": "Cliquez sur moi 🤖 puis sur ▶️",
         "subtitles": [
           {
             "start": 13.284000000000106,
@@ -423,7 +423,7 @@
           {
             "start": 45.57499999999982,
             "end": 48.9409999999998,
-            "placeholder": "💾📄→📁📗 sauvegarde les 📄 du 🤖 dans 📁📗"
+            "placeholder": "Le bouton 💾🤖📄→📁📗 sauvegarde les 📄 du 🤖 dans 📁📗"
           },
           {
             "start": 49.24299999999994,
@@ -433,7 +433,7 @@
           {
             "start": 52.70100000000002,
             "end": 56.48199999999997,
-            "placeholder": "Bon je viens de cliquer, qu'est ce que je vois ?"
+            "placeholder": "Je vois une sauvegarde à gauche, tu peux m'en dire plus ?"
           },
           {
             "start": 56.70100000000002,
@@ -448,17 +448,23 @@
           {
             "start": 65.57499999999982,
             "end": 70.2800000000002,
-            "placeholder": "pour ➕→🕔 sélectionne 🤖 ➕→🕔 et ⏹️ → ▶️"
+            "placeholder": "Sur la sauvegarde \"❓ ➕→🕔\" clique sur ✍"
           }
         ]
-      },
+      }
+    ]
+  },
+  "library_videos": [],
+  "clipSaves": {
+    "template-2": [
       {
-        "name": "➕→🕔",
+        "name": "❓ ➕→🕔",
         "subtitles": [
           {
             "start": 13.284000000000106,
             "end": 18.652999999999793,
-            "placeholder": "Il y a quelqu'un ? j'ai ▶️ 🤖 ➕→🕔, comment fonctionne 📽️🕔 ?"
+            "text": "Il y a quelqu'un ? je suis de retour sur ⚙️✍, et maintenant ?",
+            "placeholder": "Il y a quelqu'un ? je suis de retour sur ⚙️✍, et maintenant ?"
           },
           {
             "start": 31.076000000000022,
@@ -478,102 +484,101 @@
           {
             "start": 40.659000000000106,
             "end": 45.36400000000003,
-            "placeholder": "Tu dois cliquer sur ➕→🕔"
+            "placeholder": "Tu dois retourner sur la vue partagée ⚙️→🤝"
           },
           {
             "start": 45.57499999999982,
             "end": 48.9409999999998,
-            "placeholder": "Ca devrait faire apparaitre un ➕ sur la timeline 🕔"
+            "placeholder": "📄 poste ces sous titres et clique sur toi 🤖 puis joue les ▶️"
           },
           {
             "start": 49.24299999999994,
             "end": 51.860999999999876,
-            "placeholder": "Oui mais encore, ca m'avance a quoi ?"
+            "placeholder": "On est de retour ⚙️🤝 ? clique sur ➕→🕔"
           },
           {
             "start": 52.70100000000002,
             "end": 56.48199999999997,
-            "placeholder": "Je viens de cliquer sur ➕, ca a rajouté le 📁📗📄 à 🕔"
+            "placeholder": "Et clique sur le ➕ qui vient d'apparaitre sur 🕔"
           },
           {
             "start": 56.70100000000002,
             "end": 61.07400000000007,
-            "placeholder": "Oui et tu peux en mettre d'autres."
+            "placeholder": "📁📗🤖📄 a été rajouté à 🕔, c'est le début de ton 🎞️"
           },
           {
             "start": 62.70100000000002,
             "end": 64.9050000000002,
-            "placeholder": "❌🕔 retire 📁📗📄 de 🕔"
+            "placeholder": "❌🕔 retire 📁📗🤖📄 de 🕔"
           },
           {
             "start": 65.57499999999982,
             "end": 70.2800000000002,
-            "placeholder": "Clique sur 📽️🕔 pour voir 🎞️"
+            "placeholder": "Clique sur 📽️🕔 pour voir ton film 🎞️"
           }
         ]
       },
       {
-        "name": "📁📗→⚙️🤝",
+        "name": "❓ ⚙️📚",
         "subtitles": [
           {
             "start": 13.284000000000106,
             "end": 18.652999999999793,
-            "placeholder": "Bon ca suffit on commence à le connaitre ce clip, j'en ai marre..."
+            "placeholder": "Pour créer de nouveau clip 📁📗 et les rendre disponnible sur ⚙️🤝, "
           },
           {
             "start": 31.076000000000022,
             "end": 33.11299999999983,
-            "placeholder": "Je vois pas de quoi tu parles."
+            "placeholder": "il faut ajouter une video 🎞️ avec des sous-titres 📄 au dossier 📁 de la librairie 📚"
           },
           {
             "start": 35.61700000000019,
             "end": 36.860999999999876,
-            "placeholder": "Mon acting est si subtil !"
+            "placeholder": "Pour cela va dans le dossier ./📁public/📁library_videos de l'application"
           },
           {
             "start": 37.07600000000002,
             "end": 40.40599999999995,
-            "placeholder": "Mais tu peux 💾📄→📁📗 et ensuite cliquer 📁📗📄→✍.."
+            "placeholder": "Ajoute 📁nom_video et dedans place 🎞️nom_video.mp4 et 📄nom_video.srt"
           },
           {
             "start": 40.659000000000106,
             "end": 45.36400000000003,
-            "placeholder": "..ca va copier ces 📄 dans ⚙️✍ pour mieux 🔎"
+            "placeholder": "🚨 [nom_video] doit etre le meme partout 🚨"
           },
           {
             "start": 45.57499999999982,
             "end": 48.9409999999998,
-            "placeholder": "Pour rajouter une video 📚🎞️📄 à la librairie 📚 va dans le dossier ./📁public/📁library_videos"
+            "placeholder": "Dans la vue librairie ⚙️📚, tu devrais pouvoir sélectionner 📁📚🎞️📄nom_video"
           },
           {
             "start": 49.24299999999994,
             "end": 51.860999999999876,
-            "placeholder": "Ajoute 📁nom_video et dedans place 🎞️nom_video.mp4 et 📄nom_video.srt"
+            "placeholder": "Tu peux maintenant créer des clips 📁📗→⚙️🤝 avec 📁📚🎞️📄nom_video !"
           },
           {
             "start": 52.70100000000002,
             "end": 56.48199999999997,
-            "placeholder": "Pour voir les videos de la librairies 📚🎞️📄 va sur ⚙️📚"
+            "placeholder": "Pour cela tu peux entrer le temps ⏲️ de début et de fin [hh:mm:ss] de 📁📗 et lui donner un nom"
           },
           {
             "start": 56.70100000000002,
             "end": 61.07400000000007,
-            "placeholder": "📚🎞️📄nom_video devrait etre rajouter automatiquement au jeu 😄"
+            "placeholder": "Le bouton 📁📗→⚙️🤝 lance la création 📁📗 qui devrait apparaitre après un rechargement"
           },
           {
             "start": 62.70100000000002,
             "end": 64.9050000000002,
-            "placeholder": "🚨 [nom_video] doit etre le meme partout 🚨"
+            "placeholder": "❌📁📗 permet de supprimer un clip 📁📗"
           },
           {
             "start": 65.57499999999982,
             "end": 70.2800000000002,
-            "placeholder": "Tu peux maintenant 📁📗→⚙️🤝 avec 📚🎞️📄nom_video !"
+            "text": "https://github.com/valentinMachado/subtitle_game#readme",
+            "placeholder": "https://github.com/valentinMachado/subtitle_game#readme"
           }
         ]
       }
     ]
-  },
-  "library_videos": [],
-  "clipSaves": {}
+  }
 }

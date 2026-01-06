@@ -76,7 +76,7 @@
               style="display: none; max-width: 50%"
             />
             <button id="saveButton" disabled style="display: none">
-              💾📄→📁📗
+              💾🤖📄→📁📗
             </button>
           </div>
           <div id=""></div>
@@ -105,7 +105,7 @@
     <!-- ================= LIBRARY VIEW ================= -->
     <div id="libraryView" class="viewContainer" style="display: none">
       <div class="libraryLayout">
-        <span id="libraryLabel" style="cursor: inherit">📚🎞️📄</span>
+        <span id="libraryLabel" style="cursor: inherit">📁📚🎞️📄</span>
         <select
           id="librarySelect"
           style="font-size: 30px; max-width: 100%"
@@ -470,7 +470,7 @@
             .map((s, index) => {
               return `
         <div class="saveItem" style="display:flex; justify-content:space-between; align-items:center;">
-          <span>📄${s.name}</span>
+          <span>🤖📄   ${s.name}</span>
           <div>
             <button onclick="loadSave(${index})">✍</button>
             <button onclick="deleteSave(${index})">❌</button>
@@ -1175,7 +1175,7 @@
           if (!name || !lastGameState) {
             saveButton.textContent = "❌";
             setTimeout(() => {
-              saveButton.textContent = "💾📄→📁📗";
+              saveButton.textContent = "💾🤖📄→📁📗";
               saveTriggered = false;
             }, 1000);
             return;
@@ -1185,7 +1185,7 @@
           if (!selectedPlayerId || !players[selectedPlayerId]) {
             saveButton.textContent = "❌";
             setTimeout(() => {
-              saveButton.textContent = "💾📄→📁📗";
+              saveButton.textContent = "💾🤖📄→📁📗";
               saveTriggered = false;
             }, 1000);
             return;
@@ -1195,7 +1195,7 @@
           if (!subtitles || !subtitles.length) {
             saveButton.textContent = "❌";
             setTimeout(() => {
-              saveButton.textContent = "💾📄→📁📗";
+              saveButton.textContent = "💾🤖📄→📁📗";
               saveTriggered = false;
             }, 1000);
             return;
@@ -1213,7 +1213,7 @@
           // Feedback utilisateur
           saveButton.textContent = "✅";
           setTimeout(() => {
-            saveButton.textContent = "💾📄→📁📗";
+            saveButton.textContent = "💾🤖📄→📁📗";
             saveTriggered = false;
           }, 1000);
         };
