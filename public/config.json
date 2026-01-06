@@ -235,13 +235,13 @@
       {
         "start": 71.65699999999993,
         "end": 75.06999999999994,
-        "text": "Mais pour commencer clique sur 📄",
+        "text": "Pour commencer clique sur 📄",
         "placeholder": "15 Медведь мне будет кланяться,"
       },
       {
         "start": 75.2829999999999,
         "end": 78.44599999999991,
-        "text": "Ceci poste les sous-titres 📄 sur la vue partagée ⚙️🤝",
+        "text": "Ceci poste tes sous-titres 📄 sur la vue partagée ⚙️🤝",
         "placeholder": "16 а согнётся твоя спина."
       }
     ],
@@ -423,7 +423,7 @@
           {
             "start": 45.57499999999982,
             "end": 48.9409999999998,
-            "placeholder": "Le bouton 💾🤖📄→📁📗 sauvegarde les 📄 du 🤖 dans 📁📗"
+            "placeholder": "Le bouton 💾🤖📄→ sauvegarde les 📄 du 🤖 dans 📁📗"
           },
           {
             "start": 49.24299999999994,
@@ -433,7 +433,7 @@
           {
             "start": 52.70100000000002,
             "end": 56.48199999999997,
-            "placeholder": "Je vois une sauvegarde à gauche, tu peux m'en dire plus ?"
+            "placeholder": "Je vois une sauvegarde à droite, tu peux m'en dire plus ?"
           },
           {
             "start": 56.70100000000002,
@@ -489,17 +489,17 @@
           {
             "start": 45.57499999999982,
             "end": 48.9409999999998,
-            "placeholder": "📄 poste ces sous titres et clique sur toi 🤖 puis joue les ▶️"
+            "placeholder": "📄 poste ces sous titres et clique sur toi 🤖 puis ▶️ pour les jouer"
           },
           {
             "start": 49.24299999999994,
             "end": 51.860999999999876,
-            "placeholder": "On est de retour ⚙️🤝 ? clique sur ➕→🕔"
+            "placeholder": "On est de retour sur ⚙️🤝 ?"
           },
           {
             "start": 52.70100000000002,
             "end": 56.48199999999997,
-            "placeholder": "Et clique sur le ➕ qui vient d'apparaitre sur 🕔"
+            "placeholder": "clique sur ➕→🕔 puis ➕ sur la timeline 🕔"
           },
           {
             "start": 56.70100000000002,
@@ -509,7 +509,7 @@
           {
             "start": 62.70100000000002,
             "end": 64.9050000000002,
-            "placeholder": "❌🕔 retire 📁📗🤖📄 de 🕔"
+            "placeholder": "❌ retire 📁📗🤖📄 de 🕔"
           },
           {
             "start": 65.57499999999982,
@@ -564,12 +564,12 @@
           {
             "start": 56.70100000000002,
             "end": 61.07400000000007,
-            "placeholder": "Le bouton 📁📗→⚙️🤝 lance la création 📁📗 qui devrait apparaitre après un rechargement"
+            "placeholder": "Le bouton 📁📗→⚙️🤝 lance la création de 📁📗 qui devrait apparaitre après un rechargement"
           },
           {
             "start": 62.70100000000002,
             "end": 64.9050000000002,
-            "placeholder": "❌📁📗 permet de supprimer un clip 📁📗"
+            "placeholder": "❌ permet de supprimer un clip 📁📗"
           },
           {
             "start": 65.57499999999982,
