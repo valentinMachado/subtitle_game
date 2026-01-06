@@ -554,17 +554,17 @@
           {
             "start": 49.24299999999994,
             "end": 51.860999999999876,
-            "placeholder": "Tu peux maintenant créer des clips 📁📗→⚙️🤝 avec 📁📚🎞️📄nom_video !"
+            "placeholder": "Tu peux maintenant créer des clips 💾→⚙️🤝 avec 📁📚🎞️📄nom_video !"
           },
           {
             "start": 52.70100000000002,
             "end": 56.48199999999997,
-            "placeholder": "Pour cela tu peux entrer le temps ⏲️ de début et de fin [hh:mm:ss] de 📁📗 et lui donner un nom"
+            "placeholder": "Pour cela tu saisis le temps ⏲️ de début et de fin [hh:mm:ss] de 📁📗 dans 📁📚🎞️📄 et donne lui un nom"
           },
           {
             "start": 56.70100000000002,
             "end": 61.07400000000007,
-            "placeholder": "Le bouton 📁📗→⚙️🤝 lance la création de 📁📗 qui devrait apparaitre après un rechargement"
+            "placeholder": "Le bouton 💾→⚙️🤝 lance la création de 📁📗 qui devrait apparaitre après un rechargement"
           },
           {
             "start": 62.70100000000002,
