@@ -397,8 +397,6 @@
             }
           }
 
-          if (!playerSubtitles) return; // player is not in the state yet
-
           const cached = localStorage.getItem(`subs_${videoCfg.id}`);
           if (cached) {
             const subtitlesCached = JSON.parse(cached);
@@ -1227,7 +1225,7 @@
           if (confirm("📽️🕔 ?")) socket.emit("render");
         });
         goToRender.addEventListener("click", () => {
-          window.location.href = "/render/final.mp4";
+          window.location.href = "/render/film.mp4";
         });
 
         /* ================= LIBRARY VIEW ================= */

@@ -394,7 +394,7 @@ const concatVideos = async (count) => {
   return new Promise((resolve, reject) => {
     if (!fs.existsSync(renderDir)) fs.mkdirSync(renderDir, { recursive: true });
     const concatFile = path.join(renderDir, "concat.txt");
-    const finalOutput = path.join(renderDir, "final.mp4");
+    const finalOutput = path.join(renderDir, "film.mp4");
     const concatContent = Array.from({ length: count })
       .map((_, i) => `file '${i}.mp4'`)
       .join("\n");
@@ -409,7 +409,7 @@ const concatVideos = async (count) => {
       "-c",
       "copy",
       "-y",
-      "final.mp4",
+      "film.mp4",
     ];
     const ffmpegProcess = spawn(ffmpegPath, ffmpegArgs, {
       cwd: renderDir,
@@ -554,7 +554,7 @@ const render = async () => {
   if (isRendering) return;
   isRendering = true;
 
-  const finalOutputPath = path.join(publicDir, "render", "final.mp4");
+  const finalOutputPath = path.join(publicDir, "render", "film.mp4");
 
   // Supprimer l'ancien rendu si existant
   if (fs.existsSync(finalOutputPath)) {
