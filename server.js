@@ -1,10 +1,21 @@
 const os = require("os");
 const express = require("express");
+const rateLimit = require("express-rate-limit");
 const socketio = require("socket.io");
 const fs = require("fs");
 const crypto = require("crypto");
 const path = require("path");
 const { spawn } = require("child_process");
+const jwt = require("jsonwebtoken");
+const bcrypt = require("bcrypt");
+
+const secret = require("./secret.json");
+
+const JWT_SECRET = secret.JWT_SECRET || null;
+const TOKEN_TTL = "12h"; // durée de validité du token
+const useAuth = !!JWT_SECRET;
+
+// jeu
 
 function resolveBin(binName) {
   const isPkg = typeof process.pkg !== "undefined";
@@ -493,6 +504,76 @@ const server = app.listen(PORT, "0.0.0.0", () => {
 const io = socketio(server);
 app.use(express.static(publicDir));
 
+// auth
+
+app.use(express.json()); // pour parser le JSON du body
+
+// Limite pour la route de login
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // limite chaque IP à 5 requêtes par windowMs
+  message: {
+    error: "Trop de tentatives, réessayez dans 15 minutes",
+  },
+  standardHeaders: true, // renvoie les headers RateLimit-*
+  legacyHeaders: false, // désactive les headers X-RateLimit-*
+});
+
+if (useAuth) {
+  const users = secret.players;
+
+  app.set("trust proxy", 1); // <-- IMPORTANT pour express-rate-limit derrière Cloudflare
+
+  app.post("/auth/login", loginLimiter, async (req, res) => {
+    const { id, password } = req.body;
+
+    const user = users[id];
+    if (!user) return res.status(401).json({ error: "Identifiant invalide" });
+
+    const ok = await bcrypt.compare(password, user.passwordHash);
+    if (!ok) return res.status(401).json({ error: "Mot de passe invalide" });
+
+    const token = jwt.sign({ id, role: user.role }, JWT_SECRET, {
+      expiresIn: TOKEN_TTL,
+    });
+
+    res.json({ token });
+  });
+
+  function authHttp(req, res, next) {
+    if (!useAuth) return next(); // pas d'auth si JWT_SECRET non défini
+
+    const header = req.headers.authorization;
+    if (!header) return res.sendStatus(401);
+
+    const token = header.replace("Bearer ", "");
+
+    try {
+      req.user = jwt.verify(token, JWT_SECRET);
+      next();
+    } catch {
+      res.sendStatus(401);
+    }
+  }
+
+  // Middleware global d'authentification HTTP
+  app.use((req, res, next) => {
+    // Routes publiques à exclure
+    const publicPaths = ["/auth/login"];
+    if (publicPaths.includes(req.path)) return next();
+
+    // Sinon on applique l'auth
+    return authHttp(req, res, next);
+  });
+} else {
+  console.log("⚠️ JWT_SECRET non défini, authentification désactivée");
+}
+
+// Exemple : route admin protégée
+app.get("/admin/status", (req, res) => {
+  res.json({ ok: true, user: req.user });
+});
+
 // ---------- LOAD VIDEO FUNCTION ----------
 const currentTemplatePlayerIds = [];
 const isTemplate = (id) => id.startsWith("template-");
@@ -606,6 +687,19 @@ loadVideoId("template-1");
 validateClipSavesAgainstConfig();
 
 // ---------- SOCKETS ----------
+
+io.use((socket, next) => {
+  const token = socket.handshake.auth?.token;
+  if (!token) return next(new Error("unauthorized"));
+
+  try {
+    socket.user = jwt.verify(token, JWT_SECRET);
+    next();
+  } catch {
+    next(new Error("unauthorized"));
+  }
+});
+
 io.on("connection", (socket) => {
   socket.on("register", ({ role, playerName }) => {
     socket.role = role;

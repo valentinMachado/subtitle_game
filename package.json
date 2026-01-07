@@ -25,10 +25,13 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "build": "npx pkg server.js --targets node18-win-x64 --output ./subtitle_game.exe"
+    "build": "node ./copy-socket-client.js  && npx pkg server.js --targets node18-win-x64 --output ./subtitle_game.exe"
   },
   "dependencies": {
+    "bcrypt": "^6.0.0",
     "express": "^5.2.1",
+    "express-rate-limit": "^8.2.1",
+    "jsonwebtoken": "^9.0.3",
     "socket.io": "^4.8.3"
   }
 }

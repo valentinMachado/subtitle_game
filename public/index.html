@@ -4,6 +4,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>client</title>
     <script src="/vendor/socket.io.js"></script>
+
     <link rel="stylesheet" href="./style.css" />
   </head>
 
@@ -332,10 +333,11 @@
         /* ================= PLAYER NAME ================= */
         let playerName = localStorage.getItem("playerName");
         if (!playerName) {
-          playerName = prompt(
-            "Quel est ton pseudo ?",
-            "Joueur " + Math.floor(Math.random() * 1000)
-          );
+          playerName =
+            prompt(
+              "Quel est ton pseudo ?",
+              "Joueur " + Math.floor(Math.random() * 1000)
+            ) || "Joueur " + Math.floor(Math.random() * 1000);
           localStorage.setItem("playerName", playerName);
         }
         playerNameSpan.textContent = "🤖 " + playerName;
@@ -348,7 +350,20 @@
         );
 
         /* ================= SOCKET ================= */
-        const socket = io({ reconnection: true, timeout: 20000 });
+        const token = localStorage.getItem("token") || "";
+
+        if (!token) {
+          window.location.href = "./login.html";
+        }
+
+        const socket = io("http://localhost:3000", {
+          auth: { token }, // essentiel pour ton io.use
+          transports: ["websocket"], // force websocket
+          reconnection: true,
+          reconnectionAttempts: Infinity,
+          reconnectionDelay: 1000,
+        });
+
         socket.on("connect", () =>
           socket.emit("register", { role: "player", playerName })
         );
