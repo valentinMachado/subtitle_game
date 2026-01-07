@@ -54,7 +54,7 @@
             <input
               id="saveNameInput"
               placeholder="Nom 🤖📄"
-              style="display: none; max-width: 50%"
+              style="display: none; max-width: 20%"
             />
             <button id="saveButton" disabled style="display: none">
               💾🤖📄→
@@ -356,6 +356,7 @@
           window.location.href = "./login.html";
         }
 
+        // const socket = io("wss://subtitle_game.mache.lol", {
         const socket = io("http://localhost:3000", {
           auth: { token }, // essentiel pour ton io.use
           transports: ["websocket"], // force websocket

@@ -501,7 +501,58 @@ const server = app.listen(PORT, "0.0.0.0", () => {
   );
 });
 
-const io = socketio(server);
+const io = socketio(server, {
+  cors: {
+    origin: ["https://subtitle_game.mache.lol", "http://localhost:3000"],
+    methods: ["GET", "POST"],
+  },
+});
+
+// Middleware pour gérer les Range Requests sur TOUTES les vidéos
+app.use((req, res, next) => {
+  // Vérifie si la requête concerne un fichier vidéo (mp4, webm, etc.)
+  const isVideoRequest = /\.(mp4|webm|mov|mkv)$/i.test(req.path);
+  if (!isVideoRequest) return next(); // Passe au middleware suivant si ce n'est pas une vidéo
+
+  const videoPath = path.join(publicDir, req.path);
+  if (!fs.existsSync(videoPath)) return next(); // Fichier introuvable
+
+  const stat = fs.statSync(videoPath);
+  const fileSize = stat.size;
+  const range = req.headers.range;
+
+  // Si le client demande une plage spécifique
+  if (range) {
+    const parts = range.replace(/bytes=/, "").split("-");
+    const start = parseInt(parts[0], 10);
+    const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+    const chunkSize = end - start + 1;
+
+    // En-têtes pour la réponse partielle
+    res.writeHead(206, {
+      "Content-Range": `bytes ${start}-${end}/${fileSize}`,
+      "Accept-Ranges": "bytes",
+      "Content-Length": chunkSize,
+      "Content-Type": "video/mp4", // Ajuste si tu utilises d'autres formats
+    });
+
+    // Stream la partie demandée
+    const fileStream = fs.createReadStream(videoPath, { start, end });
+    fileStream.pipe(res);
+    fileStream.on("error", (err) => {
+      console.error("Stream error:", err);
+      res.end();
+    });
+  } else {
+    // Si pas de Range Request, servir le fichier complet
+    res.writeHead(200, {
+      "Content-Length": fileSize,
+      "Content-Type": "video/mp4", // Ajuste si nécessaire
+    });
+    fs.createReadStream(videoPath).pipe(res);
+  }
+});
+
 app.use(express.static(publicDir));
 
 // auth
@@ -568,11 +619,6 @@ if (useAuth) {
 } else {
   console.log("⚠️ JWT_SECRET non défini, authentification désactivée");
 }
-
-// Exemple : route admin protégée
-app.get("/admin/status", (req, res) => {
-  res.json({ ok: true, user: req.user });
-});
 
 // ---------- LOAD VIDEO FUNCTION ----------
 const currentTemplatePlayerIds = [];
