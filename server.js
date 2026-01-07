@@ -9,9 +9,9 @@ const { spawn } = require("child_process");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 
-const secret = require("./secret.json");
+let secret = fs.existsSync("./secret.json") ? require("./secret.json") : null;
 
-const JWT_SECRET = secret.JWT_SECRET || null;
+const JWT_SECRET = secret?.JWT_SECRET || null;
 const TOKEN_TTL = "12h"; // durée de validité du token
 const useAuth = !!JWT_SECRET;
 
@@ -475,6 +475,60 @@ const renderSubtitles = async (inputVideoPath, subtitles, index) => {
   });
 };
 
+let isRendering = false;
+const render = async () => {
+  if (!gameState.timeline.length) return;
+  if (isRendering) return;
+  isRendering = true;
+
+  const finalOutputPath = path.join(publicDir, "render", "film.mp4");
+
+  // Supprimer l'ancien rendu si existant
+  if (fs.existsSync(finalOutputPath)) {
+    fs.unlinkSync(finalOutputPath);
+    gameState.renderUrl = null;
+    io.emit("gameState", gameState);
+  }
+
+  try {
+    for (let index = 0; index < gameState.timeline.length; index++) {
+      const videoId = gameState.timeline[index].videoId;
+      const subtitles = gameState.timeline[index].subtitles;
+
+      const videoIndex = config.clips.findIndex((v) => v.id === videoId);
+      if (videoIndex === -1) continue;
+
+      const inputVideoPath = path.join(
+        publicDir,
+        config.clips[videoIndex].path
+      );
+
+      console.log("Rendering subtitles for video", videoId, "at index", index);
+
+      await renderSubtitles(inputVideoPath, subtitles, index);
+    }
+
+    // Concat finale
+    const { finalOutput, concatFile } = await concatVideos(
+      gameState.timeline.length
+    );
+
+    gameState.renderUrl = finalOutput;
+    gameState.finishedRender = true;
+
+    io.emit("gameState", gameState);
+
+    gameState.finishedRender = false;
+    isRendering = false;
+
+    // Cleanup
+    cleanupRenderFiles(gameState.timeline.length, concatFile);
+  } catch (err) {
+    console.error("❌ Render error:", err);
+    isRendering = false;
+  }
+};
+
 // ---------- EXPRESS + SOCKET.IO ----------
 const app = express();
 
@@ -507,6 +561,82 @@ const io = socketio(server, {
     methods: ["GET", "POST"],
   },
 });
+
+// auth
+
+app.use(express.json()); // pour parser le JSON du body
+
+if (useAuth) {
+  // Limite pour la route de login
+  const loginLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 5, // limite chaque IP à 5 requêtes par windowMs
+    message: {
+      error: "Trop de tentatives, réessayez dans 15 minutes",
+    },
+    standardHeaders: true, // renvoie les headers RateLimit-*
+    legacyHeaders: false, // désactive les headers X-RateLimit-*
+  });
+  const users = secret.players;
+
+  app.post("/auth/login", loginLimiter, async (req, res) => {
+    const { id, password } = req.body;
+
+    const user = users[id];
+    if (!user) return res.status(401).json({ error: "Identifiant invalide" });
+
+    const ok = await bcrypt.compare(password, user.passwordHash);
+    if (!ok) return res.status(401).json({ error: "Mot de passe invalide" });
+
+    const token = jwt.sign({ id, role: user.role }, JWT_SECRET, {
+      expiresIn: TOKEN_TTL,
+    });
+
+    res.json({ token });
+  });
+
+  function authHttp(req, res, next) {
+    if (!useAuth) return next();
+
+    // On cherche dans le header OU dans l'URL (?token=...)
+    const token =
+      req.headers.authorization?.replace("Bearer ", "") || req.query.token;
+
+    if (!token) {
+      // console.error("❌ Missing auth token");
+      return res.sendStatus(401);
+    }
+
+    try {
+      req.user = jwt.verify(token, JWT_SECRET);
+      next();
+    } catch {
+      res.sendStatus(401);
+    }
+  }
+
+  // Middleware global d'authentification HTTP
+  app.use((req, res, next) => {
+    // Routes publiques à exclure
+
+    const publicPaths = [
+      "/login.html",
+      "/index.html",
+      "/js/vendor/socket.io.js",
+      "/js/index.js",
+      "/config.json",
+      "/style.css",
+      "/favicon.ico",
+    ];
+    if (publicPaths.includes(req.path)) return next();
+
+    // Sinon on applique l'auth
+    return authHttp(req, res, next);
+  });
+  console.log("✅ Authentification activée");
+} else {
+  console.log("⚠️ JWT_SECRET non défini, authentification désactivée");
+}
 
 // Middleware pour gérer les Range Requests sur TOUTES les vidéos
 app.use((req, res, next) => {
@@ -544,6 +674,7 @@ app.use((req, res, next) => {
       res.end();
     });
   } else {
+    console.warn("⚠️ Pas de Range Request");
     // Si pas de Range Request, servir le fichier complet
     res.writeHead(200, {
       "Content-Length": fileSize,
@@ -553,72 +684,7 @@ app.use((req, res, next) => {
   }
 });
 
-app.use(express.static(publicDir));
-
-// auth
-
-app.use(express.json()); // pour parser le JSON du body
-
-// Limite pour la route de login
-const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // limite chaque IP à 5 requêtes par windowMs
-  message: {
-    error: "Trop de tentatives, réessayez dans 15 minutes",
-  },
-  standardHeaders: true, // renvoie les headers RateLimit-*
-  legacyHeaders: false, // désactive les headers X-RateLimit-*
-});
-
-if (useAuth) {
-  const users = secret.players;
-
-  app.set("trust proxy", 1); // <-- IMPORTANT pour express-rate-limit derrière Cloudflare
-
-  app.post("/auth/login", loginLimiter, async (req, res) => {
-    const { id, password } = req.body;
-
-    const user = users[id];
-    if (!user) return res.status(401).json({ error: "Identifiant invalide" });
-
-    const ok = await bcrypt.compare(password, user.passwordHash);
-    if (!ok) return res.status(401).json({ error: "Mot de passe invalide" });
-
-    const token = jwt.sign({ id, role: user.role }, JWT_SECRET, {
-      expiresIn: TOKEN_TTL,
-    });
-
-    res.json({ token });
-  });
-
-  function authHttp(req, res, next) {
-    if (!useAuth) return next(); // pas d'auth si JWT_SECRET non défini
-
-    const header = req.headers.authorization;
-    if (!header) return res.sendStatus(401);
-
-    const token = header.replace("Bearer ", "");
-
-    try {
-      req.user = jwt.verify(token, JWT_SECRET);
-      next();
-    } catch {
-      res.sendStatus(401);
-    }
-  }
-
-  // Middleware global d'authentification HTTP
-  app.use((req, res, next) => {
-    // Routes publiques à exclure
-    const publicPaths = ["/auth/login"];
-    if (publicPaths.includes(req.path)) return next();
-
-    // Sinon on applique l'auth
-    return authHttp(req, res, next);
-  });
-} else {
-  console.log("⚠️ JWT_SECRET non défini, authentification désactivée");
-}
+app.use(express.static(publicDir)); // last
 
 // ---------- LOAD VIDEO FUNCTION ----------
 const currentTemplatePlayerIds = [];
@@ -675,66 +741,13 @@ const loadVideoId = async (id) => {
   io.emit("gameState", gameState);
 };
 
-let isRendering = false;
-const render = async () => {
-  if (!gameState.timeline.length) return;
-  if (isRendering) return;
-  isRendering = true;
-
-  const finalOutputPath = path.join(publicDir, "render", "film.mp4");
-
-  // Supprimer l'ancien rendu si existant
-  if (fs.existsSync(finalOutputPath)) {
-    fs.unlinkSync(finalOutputPath);
-    gameState.renderUrl = null;
-    io.emit("gameState", gameState);
-  }
-
-  try {
-    for (let index = 0; index < gameState.timeline.length; index++) {
-      const videoId = gameState.timeline[index].videoId;
-      const subtitles = gameState.timeline[index].subtitles;
-
-      const videoIndex = config.clips.findIndex((v) => v.id === videoId);
-      if (videoIndex === -1) continue;
-
-      const inputVideoPath = path.join(
-        publicDir,
-        config.clips[videoIndex].path
-      );
-
-      console.log("Rendering subtitles for video", videoId, "at index", index);
-
-      await renderSubtitles(inputVideoPath, subtitles, index);
-    }
-
-    // Concat finale
-    const { finalOutput, concatFile } = await concatVideos(
-      gameState.timeline.length
-    );
-
-    gameState.renderUrl = finalOutput;
-    gameState.finishedRender = true;
-
-    io.emit("gameState", gameState);
-
-    gameState.finishedRender = false;
-    isRendering = false;
-
-    // Cleanup
-    cleanupRenderFiles(gameState.timeline.length, concatFile);
-  } catch (err) {
-    console.error("❌ Render error:", err);
-    isRendering = false;
-  }
-};
-
 loadVideoId("template-1");
 validateClipSavesAgainstConfig();
 
 // ---------- SOCKETS ----------
 
 io.use((socket, next) => {
+  if (!useAuth) return next();
   const token = socket.handshake.auth?.token;
   if (!token) return next(new Error("unauthorized"));
 
