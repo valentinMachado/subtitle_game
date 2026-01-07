@@ -148,5 +148,5 @@ convert.js
 download.js
 hide_subtitles.js
 create_srt.js
-secret.json
+secret*
 test.js

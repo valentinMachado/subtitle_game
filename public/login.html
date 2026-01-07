@@ -53,7 +53,7 @@
     </div>
 
     <!-- Socket.IO depuis le serveur -->
-    <script src="/vendor/socket.io.js"></script>
+    <script src="/js/vendor/socket.io.js"></script>
 
     <script>
       const errorDiv = document.getElementById("error");
@@ -64,7 +64,7 @@
 
         socket.on("connect", () => {
           console.log("Socket connecté :", socket.id);
-          window.location.href = "/";
+          window.location.href = "/index.html";
         });
 
         socket.on("connect_error", (err) => {
@@ -76,10 +76,10 @@
       }
 
       // Vérifie si token déjà stocké
-      const savedToken = localStorage.getItem("token");
-      if (savedToken) {
-        connectSocket(savedToken);
-      }
+      // const savedToken = localStorage.getItem("token");
+      // if (savedToken) {
+      //   connectSocket(savedToken);
+      // }
 
       loginBtn.addEventListener("click", async () => {
         errorDiv.textContent = "";
