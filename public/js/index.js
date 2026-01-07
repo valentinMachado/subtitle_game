@@ -86,9 +86,9 @@ async function main(socketUrl) {
   /* ================= SOCKET ================= */
   const token = localStorage.getItem("token") || "";
 
-//   if (!token) {
-//     window.location.href = "./login.html";
-//   }
+  //   if (!token) {
+  //     window.location.href = "./login.html";
+  //   }
 
   // const socket = io("wss://subtitle_game.mache.lol", {
   const socket = io(socketUrl, {
@@ -902,7 +902,7 @@ async function main(socketUrl) {
     if (!name || !lastGameState) {
       saveButton.textContent = "❌";
       setTimeout(() => {
-        saveButton.textContent = "💾🤖📄→";
+        saveButton.textContent = "💾";
         saveTriggered = false;
       }, 1000);
       return;
@@ -912,7 +912,7 @@ async function main(socketUrl) {
     if (!selectedPlayerId || !players[selectedPlayerId]) {
       saveButton.textContent = "❌";
       setTimeout(() => {
-        saveButton.textContent = "💾🤖📄→";
+        saveButton.textContent = "💾";
         saveTriggered = false;
       }, 1000);
       return;
@@ -922,7 +922,7 @@ async function main(socketUrl) {
     if (!subtitles || !subtitles.length) {
       saveButton.textContent = "❌";
       setTimeout(() => {
-        saveButton.textContent = "💾🤖📄→";
+        saveButton.textContent = "💾";
         saveTriggered = false;
       }, 1000);
       return;
@@ -940,7 +940,7 @@ async function main(socketUrl) {
     // Feedback utilisateur
     saveButton.textContent = "✅";
     setTimeout(() => {
-      saveButton.textContent = "💾🤖📄→";
+      saveButton.textContent = "💾";
       saveTriggered = false;
     }, 1000);
   };
