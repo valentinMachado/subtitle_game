@@ -17,7 +17,15 @@ const useAuth = !!JWT_SECRET;
 
 // jeu
 
+const dataArgIndex = process.argv.findIndex((a) => a.startsWith("--binaries="));
+const withBinaries =
+  dataArgIndex >= 0 ? process.argv[dataArgIndex + 1] === "true" : false;
+
+console.log("✅ Binaries :", withBinaries);
+
 function resolveBin(binName) {
+  if (!withBinaries) return binName;
+
   const isPkg = typeof process.pkg !== "undefined";
 
   const basePath = isPkg
@@ -32,11 +40,11 @@ function resolveBin(binName) {
 // ---------- Paths ----------
 // Si on est dans un EXE pkg, process.execPath pointe vers l'exe
 const isPkg = typeof process.pkg !== "undefined";
+const dataDir = "public";
 const appRoot = isPkg ? path.dirname(process.execPath) : __dirname;
 
 // On peut passer le dossier public via --data ./data ou fallback
-const dataArgIndex = process.argv.findIndex((a) => a.startsWith("--data"));
-const dataDir = dataArgIndex >= 0 ? process.argv[dataArgIndex + 1] : "public";
+
 const publicDir = path.resolve(appRoot, dataDir);
 const renderDir = path.join(publicDir, "render");
 
@@ -44,13 +52,15 @@ const renderDir = path.join(publicDir, "render");
 const ffmpegPath = resolveBin("ffmpeg");
 const ffprobePath = resolveBin("ffprobe");
 
-// Vérifie que les binaires existent (tu peux aussi prévoir fallback si pkg)
-[ffmpegPath, ffprobePath].forEach((bin) => {
-  if (!fs.existsSync(bin)) {
-    console.error("❌ Binaire manquant :", bin);
-    process.exit(1);
-  }
-});
+if (withBinaries) {
+  // Vérifie que les binaires existent (tu peux aussi prévoir fallback si pkg)
+  [ffmpegPath, ffprobePath].forEach((bin) => {
+    if (!fs.existsSync(bin)) {
+      console.error("❌ Binaire manquant :", bin);
+      process.exit(1);
+    }
+  });
+}
 
 // ---------- CHEMINS UTILS ----------
 const libraryVttPath = (id) => path.join(libraryRoot, id, `${id}.vtt`);
