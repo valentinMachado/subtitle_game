@@ -24,6 +24,7 @@
   "type": "commonjs",
   "main": "server.js",
   "scripts": {
+    "pm2":"pm2 delete all && pm2 start npm --name \"subtitle_game\" -- run deploy && pm2 save",
     "deploy": "node ./generate-secret.js && node server.js --binaries=false",
     "start": "node server.js",
     "build": "node ./copy-socket-client.js  && npx pkg server.js --targets node18-win-x64 --output ./subtitle_game.exe"
