@@ -140,7 +140,7 @@ vite.config.ts.timestamp-*
 
 
 
-/public/library_videos/
+# /public/library_videos/
 /public/render/
 cookies.txt
 translateSRT.js

@@ -30,7 +30,7 @@ async function main(socketUrl) {
   const playerView = document.getElementById("playerView");
   const remoteView = document.getElementById("remoteView");
   const libraryView = document.getElementById("libraryView");
-  const clipLabel = document.getElementById("clipLabel");
+
   const librarySelect = document.getElementById("librarySelect");
   const libraryClipSelect = document.getElementById("libraryClipSelect");
   const deleteClipButton = document.getElementById("deleteClipButton");
@@ -90,7 +90,6 @@ async function main(socketUrl) {
   //     window.location.href = "./login.html";
   //   }
 
-  // const socket = io("wss://subtitle_game.mache.lol", {
   const socket = io(socketUrl, {
     auth: { token }, // essentiel pour ton io.use
     transports: ["websocket"], // force websocket
@@ -306,8 +305,6 @@ async function main(socketUrl) {
     subtitleOverlayLocal.style.display = id === "playerView" ? "block" : "none";
     subtitleOverlayRemote.style.display = isRemoteVisible ? "block" : "none";
 
-    saveButton.style.display = !isRemoteVisible ? "none" : "block";
-    saveNameInput.style.display = !isRemoteVisible ? "none" : "block";
     emoticonActionMenu.style.display = isRemoteVisible ? "block" : "none";
     gameVideo.controls = !isRemoteVisible;
 

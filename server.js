@@ -7,9 +7,26 @@ const crypto = require("crypto");
 const path = require("path");
 const { spawn } = require("child_process");
 const jwt = require("jsonwebtoken");
-const bcrypt = require("bcrypt");
+const bcrypt = require("bcryptjs");
 
-let secret = fs.existsSync("./secret.json") ? require("./secret.json") : null;
+// log
+process.on("uncaughtException", (err) => {
+  fs.writeFileSync(path.join(appRoot, "crash.log"), err.stack || String(err));
+});
+
+process.on("unhandledRejection", (err) => {
+  fs.writeFileSync(path.join(appRoot, "crash.log"), err.stack || String(err));
+});
+
+// start
+
+const isPkg = typeof process.pkg !== "undefined";
+const appRoot = isPkg ? path.dirname(process.execPath) : __dirname;
+const secretPath = path.join(appRoot, "secret.json");
+
+const secret = fs.existsSync(secretPath)
+  ? JSON.parse(fs.readFileSync(secretPath, "utf-8"))
+  : null;
 
 const JWT_SECRET = secret?.JWT_SECRET || null;
 const TOKEN_TTL = "12h"; // durée de validité du token
@@ -17,9 +34,21 @@ const useAuth = !!JWT_SECRET;
 
 // jeu
 
-const dataArgIndex = process.argv.findIndex((a) => a.startsWith("--binaries="));
+const wsUrlArgIndex = process.argv.findIndex((a) => a.startsWith("--wsUrl="));
+const wsUrl =
+  wsUrlArgIndex >= 0
+    ? process.argv[wsUrlArgIndex].split("=")[1]
+    : "http://localhost:3000";
+
+console.log("✅ Websocket URL :", wsUrl);
+
+const withBinariesArgIndex = process.argv.findIndex((a) =>
+  a.startsWith("--binaries=")
+);
 const withBinaries =
-  dataArgIndex >= 0 ? process.argv[dataArgIndex + 1] === "true" : false;
+  withBinariesArgIndex >= 0
+    ? !(process.argv[withBinariesArgIndex] === "--binaries=false")
+    : true;
 
 console.log("✅ Binaries :", withBinaries);
 
@@ -39,9 +68,7 @@ function resolveBin(binName) {
 
 // ---------- Paths ----------
 // Si on est dans un EXE pkg, process.execPath pointe vers l'exe
-const isPkg = typeof process.pkg !== "undefined";
 const dataDir = "public";
-const appRoot = isPkg ? path.dirname(process.execPath) : __dirname;
 
 // On peut passer le dossier public via --data ./data ou fallback
 
@@ -193,8 +220,8 @@ if (fs.existsSync(configPath)) {
     console.error("❌ Impossible de parser config.json :", err);
   }
 } else {
-  console.warn("⚠️ config.json non trouvé dans", configPath);
-  return;
+  console.error("❌ config.json manquant :", configPath);
+  process.exit(1);
 }
 
 // ---------- UTILITAIRES SRT ----------
@@ -576,6 +603,13 @@ const io = socketio(server, {
 
 app.use(express.json()); // pour parser le JSON du body
 
+// dynamic html
+app.get("/index.html", (req, res) => {
+  let html = fs.readFileSync(path.join(publicDir, "/index.html"), "utf8");
+  html = html.replace("__WEBSOCKET_URL__", wsUrl);
+  res.type("html").send(html);
+});
+
 if (useAuth) {
   // Limite pour la route de login
   const loginLimiter = rateLimit({
@@ -587,7 +621,7 @@ if (useAuth) {
     standardHeaders: true, // renvoie les headers RateLimit-*
     legacyHeaders: false, // désactive les headers X-RateLimit-*
   });
-  const users = secret.players;
+  const users = secret.users;
 
   app.post("/auth/login", loginLimiter, async (req, res) => {
     const { id, password } = req.body;
@@ -1054,7 +1088,10 @@ const reloadConfig = async () => {
     setTimeout(reloadConfig, 100);
   }
 };
-fs.watch(configPath, () => reloadConfig());
+
+if (fs.existsSync(configPath)) {
+  fs.watch(configPath, () => reloadConfig());
+}
 
 const validateLibraryVideos = async () => {
   if (!Array.isArray(config.library_videos)) return;

@@ -1,13 +1,13 @@
 {
   "name": "subtitle_game",
-  "version": "1.0.0",
+  "version": "5.0.0",
   "bin": "server.js",
   "pkg": {
     "assets": [
       "public/**/*"
     ],
     "targets": [
-      "node20-win-x64"
+      "node18-win-x64"
     ]
   },
   "description": "subtitle game",
@@ -24,13 +24,14 @@
   "type": "commonjs",
   "main": "server.js",
   "scripts": {
-    "pm2":"pm2 start npm --name \"subtitle_game\" -- run deploy && pm2 save",
-    "deploy": "node ./generate-secret.js && node server.js --binaries=false",
-    "start": "node server.js",
-    "build": "node ./copy-socket-client.js  && npx pkg server.js --targets node18-win-x64 --output ./subtitle_game.exe"
+    "install": "sudo apt-get install ffmpeg && sudo apt get git && sudo ffpmeg && sudo apt install nginx -y && sudo apt update",
+    "pm2": "pm2 start npm --name \"subtitle_game\" -- run deploy && pm2 save",
+    "deploy": "node ./generate-secret.js && node server.js --binaries=false --wsUrl=https://mache.lol",
+    "start": "node server.js --binaries=false",
+    "build-windows": "node ./copy-socket-client.js  && npx pkg server.js --targets node18-win-x64 --output ./subtitle_game.exe"
   },
   "dependencies": {
-    "bcrypt": "^6.0.0",
+    "bcryptjs": "^3.0.3",
     "express": "^5.2.1",
     "express-rate-limit": "^8.2.1",
     "jsonwebtoken": "^9.0.3",

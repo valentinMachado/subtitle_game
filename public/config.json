@@ -454,7 +454,15 @@
       }
     ]
   },
-  "library_videos": [],
+  "library_videos": [
+    {
+      "id": "frosty",
+      "lang": "ru",
+      "path": "./library_videos/frosty/frosty.mp4",
+      "srt": "./library_videos/frosty/frosty.srt",
+      "vtt": "./library_videos/frosty/frosty.vtt"
+    }
+  ],
   "clipSaves": {
     "template-2": [
       {

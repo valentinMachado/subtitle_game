@@ -9,8 +9,7 @@
       const run = async () => {
         const { main } = await import("./js/index.js");
 
-        main("https://mache.lol");
-        // main("http://localhost:3000");
+        main("__WEBSOCKET_URL__");
       };
 
       run();
@@ -46,7 +45,7 @@
       style="display: none; gap: 16px; max-width: 100vw"
     >
       <div style="display: flex; width: 100%; height: 80%">
-        <!-- Colonne droite -->
+        <!-- Colonne gauche -->
         <div
           style="
             flex: 1;
@@ -64,7 +63,7 @@
             <input
               id="saveNameInput"
               placeholder="Nom 🤖📄"
-              style="display: none; max-width: 20%"
+              style="max-width: 25%"
             />
             <button id="saveButton" disabled style="display: none">💾</button>
           </div>
@@ -75,7 +74,7 @@
           ></div>
         </div>
 
-        <!-- Colonne gauche -->
+        <!-- Colonne droite -->
         <div
           style="
             flex: 1;
