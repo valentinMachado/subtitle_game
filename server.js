@@ -670,7 +670,6 @@ if (useAuth) {
       "/index.html",
       "/js/vendor/socket.io.js",
       "/js/index.js",
-      "/config.json",
       "/style.css",
       "/favicon.ico",
     ];

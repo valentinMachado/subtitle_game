@@ -46,6 +46,9 @@ async function main(socketUrl) {
   const playersList = document.getElementById("playersList");
   const savesList = document.getElementById("savesList");
 
+  // token
+  const token = localStorage.getItem("token") || "";
+
   /* ================= STATE ================= */
   let videosById = {};
   let libraryVideosById = {};
@@ -77,14 +80,15 @@ async function main(socketUrl) {
   playerNameSpan.textContent = "🤖 " + playerName;
 
   /* ================= CONFIG ================= */
-  const cfg = await fetch("/config.json").then((r) => r.json());
+  const cfg = await fetch("/config.json" + `?token=${token}`).then((r) =>
+    r.json()
+  );
   videosById = Object.fromEntries(cfg.clips.map((v) => [v.id, v]));
   libraryVideosById = Object.fromEntries(
     cfg.library_videos.map((v) => [v.id, v])
   );
 
   /* ================= SOCKET ================= */
-  const token = localStorage.getItem("token") || "";
 
   //   if (!token) {
   //     window.location.href = "./login.html";
