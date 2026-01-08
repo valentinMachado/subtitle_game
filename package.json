@@ -24,7 +24,7 @@
   "type": "commonjs",
   "main": "server.js",
   "scripts": {
-    "install": "sudo apt-get install ffmpeg && sudo apt get git && sudo ffpmeg && sudo apt install nginx -y && sudo apt update",
+    "install-test": "sudo apt-get install ffmpeg && sudo apt get git && sudo ffpmeg && sudo apt install nginx -y && sudo apt update",
     "pm2": "pm2 start npm --name \"subtitle_game\" -- run deploy && pm2 save",
     "deploy": "node ./generate-secret.js && node server.js --binaries=false --wsUrl=https://mache.lol",
     "start": "node server.js --binaries=false",
