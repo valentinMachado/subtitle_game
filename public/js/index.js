@@ -931,7 +931,7 @@ async function main(socketUrl) {
     if (confirm("📽️🕔 ?")) socket.emit("render");
   });
   goToRender.addEventListener("click", () => {
-    window.location.href = "/render/film.mp4";
+    window.location.href = "/render/film.mp4" + `?token=${token}`;
   });
 
   /* ================= LIBRARY VIEW ================= */
