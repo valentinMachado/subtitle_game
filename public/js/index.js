@@ -895,39 +895,21 @@ async function main(socketUrl) {
     if (saveTriggered) return; // empêche double clic
     saveTriggered = true;
 
+    if (!lastGameState) return;
+
+    if (!saveNameInput.checkValidity()) {
+      saveNameInput.reportValidity();
+      saveTriggered = false;
+      return;
+    }
+
     const name = saveNameInput.value.trim();
-    if (!name || !lastGameState) {
-      saveButton.textContent = "❌";
-      setTimeout(() => {
-        saveButton.textContent = "💾";
-        saveTriggered = false;
-      }, 1000);
-      return;
-    }
-
-    const { selectedPlayerId, players, video } = lastGameState;
-    if (!selectedPlayerId || !players[selectedPlayerId]) {
-      saveButton.textContent = "❌";
-      setTimeout(() => {
-        saveButton.textContent = "💾";
-        saveTriggered = false;
-      }, 1000);
-      return;
-    }
-
-    const subtitles = players[selectedPlayerId].subtitles;
-    if (!subtitles || !subtitles.length) {
-      saveButton.textContent = "❌";
-      setTimeout(() => {
-        saveButton.textContent = "💾";
-        saveTriggered = false;
-      }, 1000);
-      return;
-    }
+    const subtitles =
+      lastGameState.players[lastGameState.selectedPlayerId].subtitles;
 
     // 🔹 Envoi via socket au lieu de localStorage
     socket.emit("saveRemoteSubtitles", {
-      videoId: video.id,
+      videoId: lastGameState.video.id,
       name,
       subtitles,
     });
