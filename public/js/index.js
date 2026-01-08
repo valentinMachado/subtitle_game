@@ -210,7 +210,7 @@ async function main(socketUrl) {
     const saves = (state.clipSaves && state.clipSaves[state.video.id]) || [];
     if (!saves.length) {
       savesList.innerHTML = `
-            <em>Aucune sauvegarde de sous-titres 📄</em>`;
+            <em>Aucune sauvegarde de sous-titres 🤖📄</em>`;
       return;
     }
 
@@ -1025,18 +1025,20 @@ async function main(socketUrl) {
       return;
     }
 
-    // 5. Utilisation finale
-    createBtn.textContent = "⌛";
+    if (confirm("💾→⚙️🤝 ?")) {
+      // 5. Utilisation finale
+      createBtn.textContent = "⌛";
 
-    createBtn.disabled = true;
+      createBtn.disabled = true;
 
-    socket.emit("createClip", {
-      libraryVideoId: librarySelect.value,
-      lang: libraryVideosById[librarySelect.value].lang,
-      clipId: id,
-      start,
-      end,
-    });
+      socket.emit("createClip", {
+        libraryVideoId: librarySelect.value,
+        lang: libraryVideosById[librarySelect.value].lang,
+        clipId: id,
+        start,
+        end,
+      });
+    }
   });
 
   /* ================= CLEAR BUTTON ================= */

@@ -632,6 +632,8 @@ if (useAuth) {
     const ok = await bcrypt.compare(password, user.passwordHash);
     if (!ok) return res.status(401).json({ error: "Mot de passe invalide" });
 
+    console.log("✅ Connexion de", id);
+
     const token = jwt.sign({ id, role: user.role }, JWT_SECRET, {
       expiresIn: TOKEN_TTL,
     });
