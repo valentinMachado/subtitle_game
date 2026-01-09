@@ -714,7 +714,7 @@ async function main(socketUrl) {
   }
 
   submitButton.addEventListener("animationend", () => {
-    submitButton.textContent = "📄";
+    submitButton.textContent = "🤝";
   });
 
   /* ================= SOCKET GAMESTATE ================= */
