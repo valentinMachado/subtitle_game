@@ -1,5 +1,9 @@
 const SUBS_STORAGE_KEY = "subtitlesByVideoId";
 
+function getCacheKey(videoId, context) {
+  return `${context}:${videoId}`;
+}
+
 function loadAllCachedSubtitles() {
   try {
     return JSON.parse(localStorage.getItem(SUBS_STORAGE_KEY)) || {};
@@ -12,14 +16,18 @@ function saveAllCachedSubtitles(data) {
   localStorage.setItem(SUBS_STORAGE_KEY, JSON.stringify(data));
 }
 
-function getCachedSubtitles(videoId) {
+function getCachedSubtitles(videoId, context) {
+  if (context === "template") return null;
   const all = loadAllCachedSubtitles();
-  return all[videoId] || null;
+  return all[getCacheKey(videoId, context)] || null;
 }
 
-function setCachedSubtitles(videoId, subtitles) {
+function setCachedSubtitles(videoId, context, subtitles) {
+  if (context === "template") return;
   const all = loadAllCachedSubtitles();
-  all[videoId] = subtitles.map((s) => ({ text: s.text || "" }));
+  all[getCacheKey(videoId, context)] = subtitles.map((s) => ({
+    text: s.text || "",
+  }));
   saveAllCachedSubtitles(all);
 }
 
@@ -27,9 +35,9 @@ function cleanupCacheFromConfig(validVideoIds) {
   const all = loadAllCachedSubtitles();
   let changed = false;
 
-  Object.keys(all).forEach((videoId) => {
-    if (!validVideoIds.has(videoId)) {
-      delete all[videoId];
+  Object.keys(all).forEach((key) => {
+    if (!validVideoIds.has(key)) {
+      delete all[key];
       changed = true;
     }
   });
@@ -126,7 +134,7 @@ async function main(socketUrl) {
   libraryVideosById = Object.fromEntries(
     cfg.library_videos.map((v) => [v.id, v])
   );
-  const validVideoIds = new Set(cfg.clips.map((v) => v.id));
+  const validVideoIds = new Set(cfg.clips.map((v) => `clip:${v.id}`));
   cleanupCacheFromConfig(validVideoIds);
 
   /* ================= SOCKET ================= */
@@ -177,14 +185,13 @@ async function main(socketUrl) {
   };
 
   /* ================= LOCAL VIDEO ================= */
-  function loadLocalVideo(state, videoCfg) {
-    gameVideo.src = videoCfg.path + `?token=${token}`;
+  function loadLocalVideo() {
+    gameVideo.src = lastGameState.video.path + `?token=${token}`;
     gameVideo.load();
     playerSubtitles = [];
   }
 
-  function initPlayerSubtitles(state, videoCfg) {
-    // 1. Récupération depuis le gameState serveur
+  function initPlayerSubtitles(state) {
     for (let key in state.players) {
       if (playerName === state.players[key].name) {
         playerSubtitles = structuredClone(state.players[key].subtitles);
@@ -194,17 +201,21 @@ async function main(socketUrl) {
 
     if (!playerSubtitles.length) return;
 
-    // 2. Override par cache local si présent
-    const cached = getCachedSubtitles(videoCfg.id);
-    if (cached) {
-      playerSubtitles = playerSubtitles.map((s, i) => ({
-        ...s,
-        text: cached[i]?.text || s.text || "",
-      }));
-    }
+    if (state.context === "clip") {
+      const cached = getCachedSubtitles(lastGameState.video.id, state.context);
+      if (cached) {
+        playerSubtitles = playerSubtitles.map((s, i) => ({
+          ...s,
+          text: cached[i]?.text || s.text || "",
+        }));
+      }
 
-    // 3. Sauvegarde initiale
-    setCachedSubtitles(videoCfg.id, playerSubtitles);
+      setCachedSubtitles(
+        lastGameState.video.id,
+        state.context,
+        playerSubtitles
+      );
+    }
 
     renderSubtitles();
   }
@@ -388,6 +399,15 @@ async function main(socketUrl) {
     // ⚡ Copier les sous-titres dans playerSubtitles
     playerSubtitles = structuredClone(save.subtitles);
 
+    // ⚠️ cache uniquement pour les clips
+    if (lastGameState.context === "clip") {
+      setCachedSubtitles(
+        lastGameState.video.id,
+        lastGameState.context,
+        playerSubtitles
+      );
+    }
+
     // Réhydrater complètement l’UI
     renderSubtitles();
 
@@ -400,11 +420,15 @@ async function main(socketUrl) {
 
   window.deleteSave = (index) => {
     if (!lastGameState?.video?.id) return;
+    if (lastGameState.context === "template") {
+      alert("Impossible de supprimer une sauvegarde de template.");
+      return;
+    }
 
-    const videoId = lastGameState.video.id;
-
-    // 🔹 Demande serveur pour supprimer le save
-    socket.emit("deleteClipSave", { videoId, index });
+    socket.emit("deleteClipSave", {
+      videoId: lastGameState.video.id,
+      index,
+    });
   };
 
   window.focusSubtitle = (i) => {
@@ -466,8 +490,10 @@ async function main(socketUrl) {
   }
 
   window.updateSubtitle = (i, text) => {
+    if (!currentVideoId) return;
+
     playerSubtitles[i].text = text;
-    setCachedSubtitles(currentVideoId, playerSubtitles);
+    setCachedSubtitles(currentVideoId, lastGameState.context, playerSubtitles);
     renderLocalOverlay();
   };
 
@@ -488,7 +514,7 @@ async function main(socketUrl) {
     }
 
     submitButton.textContent = success ? "✅" : "❌";
-    setTimeout(() => (submitButton.textContent = "📄"), 1000);
+    setTimeout(() => (submitButton.textContent = "🤝"), 1000);
   };
 
   stopButton.onclick = () => {
@@ -503,9 +529,9 @@ async function main(socketUrl) {
     socket.emit("nextTimeButtonClicked");
   };
 
-  const updateVideoState = async (videoState) => {
-    if (videoState.playing) {
-      gameVideo.currentTime = videoState.time;
+  const updateVideoState = async () => {
+    if (lastGameState.video.playing) {
+      gameVideo.currentTime = lastGameState.video.time;
       try {
         await gameVideo.play();
       } catch {}
@@ -518,15 +544,15 @@ async function main(socketUrl) {
   };
 
   /* ================= REMOTE VIDEO ================= */
-  async function applyRemoteVideoState(videoState, videoCfg) {
-    if (lastAppliedVideoState.id !== videoState.id) {
+  async function applyRemoteVideoState() {
+    if (lastAppliedVideoState.id !== lastGameState.video.id) {
       applyingRemoteChange = true;
 
       videoStateButton.textContent = "🔄";
-      lastAppliedVideoState.id = videoState.id;
+      lastAppliedVideoState.id = lastGameState.video.id;
 
-      if (gameVideo.src !== videoCfg.path) {
-        gameVideo.src = videoCfg.path + `?token=${token}`;
+      if (gameVideo.src !== lastGameState.video.path) {
+        gameVideo.src = lastGameState.video.path + `?token=${token}`;
       }
 
       await new Promise((resolve) => {
@@ -540,50 +566,44 @@ async function main(socketUrl) {
         }
       });
 
-      await updateVideoState(videoState);
-
-      applyingRemoteChange = false;
-    }
-
-    // Gestion playerSelected
-    if (videoState.playerSelected) {
-      applyingRemoteChange = true;
-      gameVideo.currentTime = 0;
-      await updateVideoState(videoState);
+      await updateVideoState();
 
       applyingRemoteChange = false;
     }
 
     // Pause / resume
-    if (videoState.paused) {
+    if (
+      lastGameState.video.paused ||
+      lastGameState.video.playing != !gameVideo.paused
+    ) {
       applyingRemoteChange = true;
-      await updateVideoState(videoState);
+      await updateVideoState();
 
       applyingRemoteChange = false; // TODO remove this flag ?
     }
 
     // Sync temps
-    if (Math.abs(gameVideo.currentTime - videoState.time) > 1) {
+    if (Math.abs(gameVideo.currentTime - lastGameState.video.time) > 1) {
       applyingRemoteChange = true;
-      gameVideo.currentTime = videoState.time;
+      gameVideo.currentTime = lastGameState.video.time;
       applyingRemoteChange = false;
     }
 
-    lastAppliedVideoState = { ...videoState };
+    lastAppliedVideoState = { ...lastGameState.video };
   }
 
   function renderRemoteSubtitles() {
     if (!lastGameState) return;
     const t = gameVideo.currentTime;
-    const { selectedPlayerId, players, video: videoState } = lastGameState;
-    const videoCfg = videosById[videoState.id];
+    const { selectedPlayerId, players } = lastGameState;
+
     let activeSub = null;
     if (selectedPlayerId && players[selectedPlayerId])
       activeSub = players[selectedPlayerId].subtitles.find(
         (s) => t >= s.start && t <= s.end
       );
-    if (!activeSub && videoCfg?.subtitles) {
-      const placeholder = videoCfg.subtitles.find(
+    if (!activeSub && lastGameState.video?.subtitles) {
+      const placeholder = lastGameState.video.subtitles.find(
         (s) => t >= s.start && t <= s.end
       );
       if (placeholder) activeSub = { text: placeholder.placeholder };
@@ -698,14 +718,12 @@ async function main(socketUrl) {
   socket.on("gameState", async (state) => {
     lastGameState = state;
 
-    const videoCfg = videosById[state.video.id];
-
     if (currentVideoId !== state.video.id) {
       currentVideoId = state.video.id;
-      loadLocalVideo(state, videoCfg);
+      loadLocalVideo(state);
     }
 
-    if (playerSubtitles.length === 0) initPlayerSubtitles(state, videoCfg);
+    if (playerSubtitles.length === 0) initPlayerSubtitles(state);
 
     renderClipSelect(state.video.id);
 
@@ -788,20 +806,9 @@ async function main(socketUrl) {
       !state?.selectedPlayerId ||
       !state.players[state.selectedPlayerId]?.submitted;
 
-    applyRemoteVideoState(state.video, videoCfg);
+    applyRemoteVideoState();
     renderPlayers(state);
   });
-
-  const playerState = () => {
-    if (!lastGameState) return null;
-
-    const players = Object.values(lastGameState.players);
-    for (let i = 0; i < players.length; i++) {
-      if (players[i].name == playerName) return players[i];
-    }
-
-    return null;
-  };
 
   clipSelect.onchange = () => {
     if (clipSelect.value) socket.emit("selectVideoById", clipSelect.value);
@@ -832,7 +839,11 @@ async function main(socketUrl) {
   window.selectPlayer = (id) => socket.emit("selectPlayer", id);
 
   function renderClipSelect(activeId) {
+    if (!lastGameState) return;
     clipSelect.innerHTML = "";
+
+    const templateOptGroup = document.createElement("optgroup");
+    templateOptGroup.label = "Templates";
 
     Object.values(videosById)
       .sort((a, b) => a.id.toString().localeCompare(b.id.toString()))
@@ -841,16 +852,26 @@ async function main(socketUrl) {
         option.value = v.id;
         option.textContent = `${v.id} (${v.lang})`;
 
+        clipSelect.appendChild(option);
+
         if (v.id === activeId) {
           option.selected = true;
         }
-
-        clipSelect.appendChild(option);
       });
-  }
 
-  function isTemplate(id) {
-    return id.startsWith("template-");
+    lastGameState.templateIds.forEach((id) => {
+      const option = document.createElement("option");
+      option.value = id;
+      option.textContent = `${id}`;
+
+      templateOptGroup.appendChild(option);
+
+      if (id === activeId) {
+        option.selected = true;
+      }
+    });
+
+    clipSelect.appendChild(templateOptGroup);
   }
 
   function renderLibraryView() {
@@ -888,7 +909,7 @@ async function main(socketUrl) {
 
     libraryClipSelect.innerHTML = "";
 
-    const clips = Object.values(videosById).filter((v) => !isTemplate(v.id));
+    const clips = Object.values(videosById);
 
     if (!clips.length) {
       const o = document.createElement("option");
@@ -931,6 +952,11 @@ async function main(socketUrl) {
     saveTriggered = true;
 
     if (!lastGameState) return;
+
+    if (lastGameState.context === "template") {
+      alert("Impossible de modifier un template");
+      return;
+    }
 
     if (!saveNameInput.checkValidity()) {
       saveNameInput.reportValidity();

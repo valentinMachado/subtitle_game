@@ -123,8 +123,59 @@ const librarySrtPath = (libraryVideoId) =>
 const libraryVideoExists = (id) =>
   fs.existsSync(libraryVideoPath(id)) && fs.existsSync(librarySrtPath(id));
 
+// template
+
+const templatePath = path.join(appRoot, "template.json");
+
+const templates = fs.existsSync(templatePath)
+  ? JSON.parse(fs.readFileSync(templatePath, "utf-8"))
+  : {};
+
+const getTemplate = (id) => templates[id] || null;
+
+const clipsDir = path.join(publicDir, "clips");
+
+const cleanupOrphanClips = () => {
+  if (!fs.existsSync(clipsDir)) return;
+
+  // 1️⃣ IDs autorisés
+  const validIds = new Set();
+
+  // clips du config.json
+  if (Array.isArray(config.clips)) {
+    config.clips.forEach((clip) => {
+      if (clip?.id) validIds.add(clip.id);
+    });
+  }
+
+  // templates
+  Object.keys(templates).forEach((id) => validIds.add(id));
+
+  // 2️⃣ Scan du dossier clips
+  const files = fs.readdirSync(clipsDir);
+
+  for (const file of files) {
+    if (!file.endsWith(".mp4")) continue;
+
+    const clipId = path.basename(file, ".mp4");
+
+    if (!validIds.has(clipId)) {
+      const filePath = path.join(clipsDir, file);
+      try {
+        fs.unlinkSync(filePath);
+        console.log(`🗑️ Clip orphelin supprimé : ${file}`);
+      } catch (err) {
+        console.error(`❌ Impossible de supprimer ${file}`, err);
+      }
+    } else {
+      console.log(`✅ Clip autorisé : ${file}`);
+    }
+  }
+};
+
 // ---------- GAMESTATE ----------
 const gameState = {
+  context: null,
   video: {
     id: null,
     index: 0,
@@ -141,6 +192,7 @@ const gameState = {
   renderUrl: null,
   finishedRender: false,
   receivedSubtitles: false,
+  templateIds: Object.keys(templates).map((id) => id),
 };
 
 const setGameStateVideoTime = (t) => {
@@ -191,6 +243,7 @@ const validateClipSavesAgainstConfig = () => {
   if (!gameState.clipSaves || typeof gameState.clipSaves !== "object") return;
 
   const validClipIds = new Set(config.clips.map((c) => c.id));
+  Object.keys(templates).forEach((id) => validClipIds.add(id));
 
   let removed = false;
 
@@ -216,6 +269,7 @@ if (fs.existsSync(configPath)) {
   try {
     config = JSON.parse(fs.readFileSync(configPath, "utf-8"));
     loadClipSavesFromConfig();
+    cleanupOrphanClips();
   } catch (err) {
     console.error("❌ Impossible de parser config.json :", err);
   }
@@ -532,17 +586,29 @@ const render = async () => {
       const videoId = gameState.timeline[index].videoId;
       const subtitles = gameState.timeline[index].subtitles;
 
-      const videoIndex = config.clips.findIndex((v) => v.id === videoId);
-      if (videoIndex === -1) continue;
+      const template = getTemplate(videoId);
+      if (template) {
+        const inputVideoPath = path.join(publicDir, template.clip.path);
+        console.log(
+          "Rendering subtitles for template",
+          videoId,
+          "at index",
+          index
+        );
+        await renderSubtitles(inputVideoPath, subtitles, index);
+        continue;
+      } else {
+        const clipIndex = config.clips.findIndex((v) => v.id === videoId);
+        if (clipIndex === -1) continue;
 
-      const inputVideoPath = path.join(
-        publicDir,
-        config.clips[videoIndex].path
-      );
-
-      console.log("Rendering subtitles for video", videoId, "at index", index);
-
-      await renderSubtitles(inputVideoPath, subtitles, index);
+        const inputVideoPath = path.join(
+          publicDir,
+          config.clips[clipIndex].path
+        );
+        console.log("Rendering subtitles for clip", videoId, "at index", index);
+        await renderSubtitles(inputVideoPath, subtitles, index);
+        continue;
+      }
     }
 
     // Concat finale
@@ -732,67 +798,102 @@ app.use((req, res, next) => {
 app.use(express.static(publicDir)); // last
 
 // ---------- LOAD VIDEO FUNCTION ----------
-const currentTemplatePlayerIds = [];
-const isTemplate = (id) => id.startsWith("template-");
 
 const loadVideoId = async (id) => {
-  if (id === gameState.video.id) {
-    return;
-  }
+  if (id === gameState.video.id) return;
 
   console.log("⌛ Chargement de la video", id);
 
-  let index = config.clips.findIndex((v) => v.id === id);
-  if (index === -1) {
-    console.warn(`⚠️ Video "${id}" non trouvée`);
-    index = 0;
+  const template = getTemplate(id);
+  const isTpl = !!template;
+
+  gameState.context = isTpl ? "template" : "clip";
+
+  // ---- ClipSaves ----
+  if (isTpl) {
+    gameState.clipSaves = {
+      [id]: Array.isArray(template.clipSaves)
+        ? structuredClone(template.clipSaves)
+        : [],
+    };
+    gameState.video = {
+      id,
+      index: -1,
+      duration: 0,
+      time: 0,
+      playing: false,
+      playerSelected: false,
+      paused: false,
+      path: template.clip.path,
+      subtitles: template.clip.subtitles,
+    };
+  } else {
+    gameState.clipSaves = {
+      [id]: structuredClone(config.clipSaves?.[id] || []),
+    };
+    gameState.video = {
+      id,
+      index: config.clips.findIndex((v) => v.id === id),
+      duration: 0,
+      time: 0,
+      playing: false,
+      playerSelected: false,
+      paused: false,
+      path: config.clips[gameState.video.index].path,
+      subtitles: config.clips[gameState.video.index].subtitles,
+    };
   }
 
-  gameState.video.index = index;
-  gameState.video.id = config.clips[gameState.video.index].id;
-  setGameStateVideoTime(0);
-  gameState.video.playing = false;
-
+  // ---- Durée vidéo ----
   try {
-    gameState.video.duration = await getVideoDuration(
-      path.join(publicDir, config.clips[gameState.video.index]?.path)
-    );
-  } catch (e) {
-    console.error(e);
+    const videoPath = isTpl
+      ? path.join(publicDir, template.clip.path)
+      : path.join(publicDir, config.clips[gameState.video.index].path);
+
+    gameState.video.duration = await getVideoDuration(videoPath);
+  } catch {
     gameState.video.duration = 0;
   }
 
-  currentTemplatePlayerIds.forEach((id) => delete gameState.players[id]);
-  Object.values(gameState.players).forEach((p) => {
-    p.submitted = false;
-    p.hasBeenSelected = false;
-    p.subtitles = isTemplate(gameState.video.id)
-      ? config[gameState.video.id].defaultSubtitles
-      : config.clips[gameState.video.index].subtitles;
+  // ---- Reset joueurs ----
+  gameState.selectedPlayerId = null;
+
+  Object.entries(gameState.players).forEach(([id, player]) => {
+    if (id.toString().startsWith("template-")) {
+      delete gameState.players[id];
+    } else {
+      player.subtitles = structuredClone(gameState.video.subtitles);
+    }
   });
 
-  if (isTemplate(gameState.video.id) && config[gameState.video.id]) {
-    Object.entries(config[gameState.video.id].players).forEach(
-      ([id, player]) => {
-        const gamePlayer = {
-          name: player.name,
-          submitted: true,
-          hasBeenSelected: false,
-          subtitles: player.subtitles,
-        };
-        gameState.players[id] = gamePlayer;
-        currentTemplatePlayerIds.push(id);
-        id === 0 ? (gameState.selectedPlayerId = id) : null;
-      }
-    );
+  // Object.keys(gameState.players).forEach((id) => console.log(id));
 
-    // console.log(Object.values(gameState.players).map((p) => p.name));
+  // ---- Joueurs template ----
+  if (isTpl) {
+    template.players.forEach((player, i) => {
+      const playerId = `template-${id}-${i}`;
+
+      gameState.players[playerId] = {
+        name: player.name,
+        submitted: true,
+        hasBeenSelected: false,
+        subtitles: player.subtitles,
+      };
+
+      if (i === 0) gameState.selectedPlayerId = playerId;
+    });
   }
 
   io.emit("gameState", gameState);
 };
 
-loadVideoId("template-1");
+const firstTemplateId = Object.keys(templates)[0];
+if (firstTemplateId) {
+  loadVideoId(firstTemplateId);
+} else {
+  console.log("⚠️ Pas de template");
+}
+
 validateClipSavesAgainstConfig();
 
 // ---------- SOCKETS ----------
@@ -826,12 +927,14 @@ io.on("connection", (socket) => {
       //   gameState.video.id
       // );
 
+      const template = getTemplate(gameState.video.id);
+
       gameState.players[playerId] = {
         name: playerName || "Joueur " + Math.floor(Math.random() * 1000),
         submitted: false,
         hasBeenSelected: true, // wait submission of srt
-        subtitles: isTemplate(gameState.video.id)
-          ? config[gameState.video.id].defaultSubtitles
+        subtitles: template
+          ? template.clip.subtitles
           : config.clips[gameState.video.index].subtitles,
       };
 
@@ -885,16 +988,30 @@ io.on("connection", (socket) => {
     const videoId = gameState.video.id;
     const subtitles = gameState.players[gameState.selectedPlayerId].subtitles;
 
-    if (!config.clips.some((c) => c.id === videoId)) {
-      console.warn(`❌ Tentative de save sur clip inexistant : ${videoId}`);
+    const template = getTemplate(videoId);
+
+    if (template) {
+      // template.clipSaves ??= [];
+      // template.clipSaves.push({
+      //   name,
+      //   subtitles,
+      //   createdAt: new Date().toISOString(),
+      // });
+
+      // io.emit("gameState", gameState);
       return;
     }
 
+    // --- comportement normal pour les clips ---
     if (!gameState.clipSaves[videoId]) {
       gameState.clipSaves[videoId] = [];
     }
 
-    gameState.clipSaves[videoId].push({ name, subtitles });
+    gameState.clipSaves[videoId].push({
+      name,
+      subtitles,
+      createdAt: new Date().toISOString(),
+    });
 
     await saveClipSavesToConfig();
   });
@@ -907,18 +1024,33 @@ io.on("connection", (socket) => {
     io.emit("gameState", gameState);
   });
 
-  socket.on("submitSubtitles", (subtitles) => {
-    if (subtitles.filter((s) => s.text !== "").length === 0) return;
-
+  socket.on("submitSubtitles", (clientSubs) => {
     if (!socket.playerId) return;
 
     const player = gameState.players[socket.playerId];
     if (!player) return;
 
+    const template = getTemplate(gameState.video.id);
+
+    const templateSubs = template
+      ? template.clip.subtitles
+      : config.clips[gameState.video.index].subtitles;
+
+    if (!Array.isArray(templateSubs)) return;
+
+    // Vérifie qu’il y a au moins un texte non vide
+    if (!clientSubs.some((s) => s.text && s.text.trim() !== "")) return;
+
+    // Reconstruction canonique
+    player.subtitles = templateSubs.map((tpl, i) => ({
+      start: tpl.start,
+      end: tpl.end,
+      placeholder: tpl.placeholder,
+      text: clientSubs[i]?.text ?? "",
+    }));
+
     player.submitted = true;
-    player.subtitles = subtitles;
     player.hasBeenSelected = false;
-    console.log(player.name, "submitted subtitles");
 
     gameState.receivedSubtitles = true;
     io.emit("gameState", gameState);
@@ -942,8 +1074,6 @@ io.on("connection", (socket) => {
   });
 
   socket.on("deleteClip", (clipId) => {
-    const configPath = path.resolve("./public/config.json");
-
     if (!fs.existsSync(configPath)) {
       console.error("❌ config.json introuvable !");
       return;
@@ -957,10 +1087,9 @@ io.on("connection", (socket) => {
       return;
     }
 
-    // Récupère le chemin de la vidéo à supprimer
-    const videoPath = path.resolve("./public", config.clips[index].path);
+    // ⚠️ Utilisation de publicDir pour construire le chemin exact
+    const videoPath = path.join(publicDir, config.clips[index].path);
 
-    // Supprime la vidéo si elle existe
     if (fs.existsSync(videoPath)) {
       try {
         fs.unlinkSync(videoPath);
@@ -969,7 +1098,7 @@ io.on("connection", (socket) => {
         console.error(`❌ Erreur lors de la suppression de la vidéo :`, err);
       }
     } else {
-      console.log(`⚠️ Vidéo "${clipId}" introuvable : ${videoPath}`);
+      console.warn(`⚠️ Vidéo "${clipId}" introuvable : ${videoPath}`);
     }
 
     // Supprime le clip de la config
