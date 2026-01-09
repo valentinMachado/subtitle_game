@@ -736,6 +736,13 @@ const currentTemplatePlayerIds = [];
 const isTemplate = (id) => id.startsWith("template-");
 
 const loadVideoId = async (id) => {
+  if (id === gameState.video.id) {
+    io.emit("gameState", gameState);
+    return;
+  }
+
+  console.log("⌛ Chargement de la video", id);
+
   let index = config.clips.findIndex((v) => v.id === id);
   if (index === -1) {
     console.warn(`⚠️ Video "${id}" non trouvée`);
@@ -873,8 +880,6 @@ io.on("connection", (socket) => {
     );
 
     await saveClipSavesToConfig();
-
-    io.emit("gameState", gameState);
   });
 
   socket.on("saveRemoteSubtitles", async ({ name }) => {
@@ -893,8 +898,6 @@ io.on("connection", (socket) => {
     gameState.clipSaves[videoId].push({ name, subtitles });
 
     await saveClipSavesToConfig();
-
-    io.emit("gameState", gameState);
   });
 
   socket.on("emoticon", ({ name, text }) => {
