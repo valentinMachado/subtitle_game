@@ -834,6 +834,7 @@ const loadVideoId = async (id) => {
     gameState.video.index = config.clips.findIndex((v) => v.id === id);
     gameState.video = {
       id,
+      index: gameState.video.index,
       duration: 0,
       time: 0,
       playing: false,
@@ -879,11 +880,9 @@ const loadVideoId = async (id) => {
         hasBeenSelected: false,
         subtitles: player.subtitles,
       };
-
-      if (i === 0) gameState.selectedPlayerId = playerId;
     });
   }
-
+  // console.log(Object.keys(gameState.players));
   io.emit("gameState", gameState);
 };
 
@@ -912,20 +911,16 @@ io.use((socket, next) => {
 });
 
 io.on("connection", (socket) => {
+  // console.log("server connection socket id =", socket.id);
+
   socket.on("register", ({ role, playerName }) => {
+    // console.log("server register socket id =", socket.id);
+
     socket.role = role;
 
     if (role === "player") {
       const playerId = crypto.randomUUID();
       socket.playerId = playerId;
-
-      // console.log(
-      //   playerId,
-      //   " registered",
-      //   isTemplate(gameState.video.id),
-      //   config,
-      //   gameState.video.id
-      // );
 
       const template = getTemplate(gameState.video.id);
 
@@ -941,9 +936,9 @@ io.on("connection", (socket) => {
       if (gameState.players[playerId].subtitles.length === 0) {
         console.warn(`⚠️ Video "${gameState.video.id}" sans sous-titres`);
       }
-
-      console.log(playerName, " connected");
     }
+
+    // console.log("players", Object.keys(gameState.players));
 
     io.emit("gameState", gameState);
   });
@@ -1198,6 +1193,8 @@ io.on("connection", (socket) => {
     if (!socket.playerId) return;
 
     delete gameState.players[socket.playerId];
+
+    // console.log(`👋 Player ${socket.playerId} disconnected`);
 
     if (gameState.selectedPlayerId === socket.playerId) {
       gameState.selectedPlayerId = null;

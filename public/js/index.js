@@ -151,9 +151,16 @@ async function main(socketUrl) {
     reconnectionDelay: 1000,
   });
 
-  socket.on("connect", () =>
-    socket.emit("register", { role: "player", playerName })
-  );
+  function register() {
+    console.log("emit on socket id =", socket.id);
+    socket.emit("register", { role: "player", playerName });
+  }
+
+  if (socket.connected) {
+    register();
+  } else {
+    socket.on("connect", register);
+  }
 
   socket.on("reload", () => location.reload());
 
