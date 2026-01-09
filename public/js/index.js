@@ -939,24 +939,30 @@ async function main(socketUrl) {
     }
 
     const name = saveNameInput.value.trim();
-    const subtitles =
-      lastGameState.players[lastGameState.selectedPlayerId].subtitles;
 
-    // 🔹 Envoi via socket au lieu de localStorage
-    socket.emit("saveRemoteSubtitles", {
-      videoId: lastGameState.video.id,
-      name,
-      subtitles,
-    });
+    if (
+      confirm(
+        `Enregistrer ${
+          lastGameState.players[lastGameState.selectedPlayerId].name
+        } sous-titres ?`
+      )
+    ) {
+      // 🔹 Envoi via socket au lieu de localStorage
+      socket.emit("saveRemoteSubtitles", {
+        name,
+      });
 
-    console.log(subtitles);
+      console.log(
+        lastGameState.players[lastGameState.selectedPlayerId].subtitles
+      );
 
-    // Feedback utilisateur
-    saveButton.textContent = "✅";
-    setTimeout(() => {
-      saveButton.textContent = "💾";
-      saveTriggered = false;
-    }, 1000);
+      // Feedback utilisateur
+      saveButton.textContent = "✅";
+      setTimeout(() => {
+        saveButton.textContent = "💾";
+        saveTriggered = false;
+      }, 1000);
+    }
   };
 
   // déclenchement unique pour click/touch

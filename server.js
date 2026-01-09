@@ -877,7 +877,10 @@ io.on("connection", (socket) => {
     io.emit("gameState", gameState);
   });
 
-  socket.on("saveRemoteSubtitles", async ({ videoId, name, subtitles }) => {
+  socket.on("saveRemoteSubtitles", async ({ name }) => {
+    const videoId = gameState.video.id;
+    const subtitles = gameState.players[gameState.selectedPlayerId].subtitles;
+
     if (!config.clips.some((c) => c.id === videoId)) {
       console.warn(`❌ Tentative de save sur clip inexistant : ${videoId}`);
       return;
