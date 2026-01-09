@@ -831,9 +831,9 @@ const loadVideoId = async (id) => {
     gameState.clipSaves = {
       [id]: structuredClone(config.clipSaves?.[id] || []),
     };
+    gameState.video.index = config.clips.findIndex((v) => v.id === id);
     gameState.video = {
       id,
-      index: config.clips.findIndex((v) => v.id === id),
       duration: 0,
       time: 0,
       playing: false,
@@ -1088,7 +1088,7 @@ io.on("connection", (socket) => {
     }
 
     // ⚠️ Utilisation de publicDir pour construire le chemin exact
-    const videoPath = path.join(publicDir, config.clips[index].path);
+    const videoPath = path.resolve(publicDir, config.clips[index].path);
 
     if (fs.existsSync(videoPath)) {
       try {
