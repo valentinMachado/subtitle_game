@@ -737,7 +737,6 @@ const isTemplate = (id) => id.startsWith("template-");
 
 const loadVideoId = async (id) => {
   if (id === gameState.video.id) {
-    io.emit("gameState", gameState);
     return;
   }
 
