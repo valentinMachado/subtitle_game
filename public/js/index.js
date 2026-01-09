@@ -1,3 +1,42 @@
+const SUBS_STORAGE_KEY = "subtitlesByVideoId";
+
+function loadAllCachedSubtitles() {
+  try {
+    return JSON.parse(localStorage.getItem(SUBS_STORAGE_KEY)) || {};
+  } catch {
+    return {};
+  }
+}
+
+function saveAllCachedSubtitles(data) {
+  localStorage.setItem(SUBS_STORAGE_KEY, JSON.stringify(data));
+}
+
+function getCachedSubtitles(videoId) {
+  const all = loadAllCachedSubtitles();
+  return all[videoId] || null;
+}
+
+function setCachedSubtitles(videoId, subtitles) {
+  const all = loadAllCachedSubtitles();
+  all[videoId] = subtitles.map((s) => ({ text: s.text || "" }));
+  saveAllCachedSubtitles(all);
+}
+
+function cleanupCacheFromConfig(validVideoIds) {
+  const all = loadAllCachedSubtitles();
+  let changed = false;
+
+  Object.keys(all).forEach((videoId) => {
+    if (!validVideoIds.has(videoId)) {
+      delete all[videoId];
+      changed = true;
+    }
+  });
+
+  if (changed) saveAllCachedSubtitles(all);
+}
+
 async function main(socketUrl) {
   /* ================= DOM ================= */
   const viewInfo = document.getElementById("viewInfo");
@@ -87,6 +126,8 @@ async function main(socketUrl) {
   libraryVideosById = Object.fromEntries(
     cfg.library_videos.map((v) => [v.id, v])
   );
+  const validVideoIds = new Set(cfg.clips.map((v) => v.id));
+  cleanupCacheFromConfig(validVideoIds);
 
   /* ================= SOCKET ================= */
 
@@ -143,36 +184,29 @@ async function main(socketUrl) {
   }
 
   function initPlayerSubtitles(state, videoCfg) {
+    // 1. Récupération depuis le gameState serveur
     for (let key in state.players) {
       if (playerName === state.players[key].name) {
-        playerSubtitles = state.players[key].subtitles;
+        playerSubtitles = structuredClone(state.players[key].subtitles);
         break;
       }
     }
 
-    const cached = localStorage.getItem(`subs_${videoCfg.id}`);
+    if (!playerSubtitles.length) return;
+
+    // 2. Override par cache local si présent
+    const cached = getCachedSubtitles(videoCfg.id);
     if (cached) {
-      const subtitlesCached = JSON.parse(cached);
-      playerSubtitles = playerSubtitles.map((s, index) => {
-        return {
-          ...s,
-          text: subtitlesCached[index] ? subtitlesCached[index].text : "",
-        };
-      });
+      playerSubtitles = playerSubtitles.map((s, i) => ({
+        ...s,
+        text: cached[i]?.text || s.text || "",
+      }));
     }
 
-    localStorage.setItem(
-      `subs_${currentVideoId}`,
-      JSON.stringify(playerSubtitles.map((s) => ({ text: s.text })))
-    );
-    cleanupOtherCaches(videoCfg.id);
-    renderSubtitles();
-  }
+    // 3. Sauvegarde initiale
+    setCachedSubtitles(videoCfg.id, playerSubtitles);
 
-  function cleanupOtherCaches(id) {
-    Object.keys(localStorage)
-      .filter((k) => k.startsWith("subs_") && k !== `subs_${id}`)
-      .forEach((k) => localStorage.removeItem(k));
+    renderSubtitles();
   }
 
   const stripHours = (t) => {
@@ -433,10 +467,7 @@ async function main(socketUrl) {
 
   window.updateSubtitle = (i, text) => {
     playerSubtitles[i].text = text;
-    localStorage.setItem(
-      `subs_${currentVideoId}`,
-      JSON.stringify(playerSubtitles)
-    );
+    setCachedSubtitles(currentVideoId, playerSubtitles);
     renderLocalOverlay();
   };
 
