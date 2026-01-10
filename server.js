@@ -217,9 +217,12 @@ const loadClipSavesFromConfig = () => {
 
   const validClipIds = new Set(config.clips.map((c) => c.id));
 
+  let changed = false;
   for (const [clipId, saves] of Object.entries(config.clipSaves)) {
     if (!validClipIds.has(clipId)) {
       console.warn(`🗑️ clipSaves ignoré (clip inexistant) : ${clipId}`);
+      delete config.clipSaves[clipId];
+      changed = true;
       continue;
     }
 
@@ -227,6 +230,8 @@ const loadClipSavesFromConfig = () => {
       gameState.clipSaves[clipId] = saves;
     }
   }
+
+  if (changed) saveClipSavesToConfig();
 };
 
 const saveClipSavesToConfig = async () => {
@@ -323,7 +328,7 @@ function clipSubtitles(subtitles, clipStart, clipEnd) {
     .map((s, index) => ({
       start: Math.max(0, s.start - clipStart),
       end: Math.min(clipEnd - clipStart, s.end - clipStart),
-      placeholder: index + 1 + ": " + s.placeholder,
+      placeholder: s.placeholder,
     }));
 }
 

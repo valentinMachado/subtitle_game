@@ -46,6 +46,8 @@ function cleanupCacheFromConfig(validVideoIds) {
 }
 
 async function main(socketUrl) {
+  console.log(socketUrl);
+
   /* ================= DOM ================= */
   const viewInfo = document.getElementById("viewInfo");
   const gameVideo = document.getElementById("gameVideo");
@@ -143,13 +145,7 @@ async function main(socketUrl) {
   //     window.location.href = "./login.html";
   //   }
 
-  const socket = io(socketUrl, {
-    auth: { token }, // essentiel pour ton io.use
-    transports: ["websocket"], // force websocket
-    reconnection: true,
-    reconnectionAttempts: Infinity,
-    reconnectionDelay: 1000,
-  });
+  const socket = io({ auth: { token } });
 
   function register() {
     console.log("emit on socket id =", socket.id);
