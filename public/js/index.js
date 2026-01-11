@@ -428,10 +428,12 @@ async function main(socketUrl) {
       return;
     }
 
-    socket.emit("deleteClipSave", {
-      videoId: lastGameState.video.id,
-      index,
-    });
+    if (confirm("❌🤖📄 ?")) {
+      socket.emit("deleteClipSave", {
+        videoId: lastGameState.video.id,
+        index,
+      });
+    }
   };
 
   window.focusSubtitle = (i) => {
