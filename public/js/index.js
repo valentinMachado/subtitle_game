@@ -973,9 +973,9 @@ async function main(socketUrl) {
 
     if (
       confirm(
-        `Enregistrer ${
+        `Sauvegarder 🤖 ${
           lastGameState.players[lastGameState.selectedPlayerId].name
-        } sous-titres ?`
+        } sous-titres 📄 ?`
       )
     ) {
       // 🔹 Envoi via socket au lieu de localStorage
