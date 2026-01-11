@@ -815,12 +815,20 @@ const loadVideoId = async (id) => {
   gameState.context = isTpl ? "template" : "clip";
 
   // ---- ClipSaves ----
+  if (!gameState.clipSaves) {
+    gameState.clipSaves = {};
+  }
+
   if (isTpl) {
-    gameState.clipSaves = {
-      [id]: Array.isArray(template.clipSaves)
-        ? structuredClone(template.clipSaves)
-        : [],
-    };
+    gameState.clipSaves[id] = Array.isArray(template.clipSaves)
+      ? structuredClone(template.clipSaves)
+      : [];
+  } else {
+    gameState.clipSaves[id] = structuredClone(config.clipSaves?.[id] || []);
+  }
+
+  // ---- Video ----
+  if (isTpl) {
     gameState.video = {
       id,
       index: -1,
@@ -833,9 +841,6 @@ const loadVideoId = async (id) => {
       subtitles: template.clip.subtitles,
     };
   } else {
-    gameState.clipSaves = {
-      [id]: structuredClone(config.clipSaves?.[id] || []),
-    };
     gameState.video.index = config.clips.findIndex((v) => v.id === id);
     gameState.video = {
       id,
