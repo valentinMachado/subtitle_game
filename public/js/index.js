@@ -938,7 +938,8 @@ async function main(socketUrl) {
   renderLibraryView();
 
   deleteClipButton.onclick = () => {
-    socket.emit("deleteClip", libraryClipSelect.value);
+    if (confirm(`❌📁📗${libraryClipSelect.value} ?`))
+      socket.emit("deleteClip", libraryClipSelect.value);
   };
 
   librarySelect.onchange = () => {
