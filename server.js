@@ -329,6 +329,7 @@ function clipSubtitles(subtitles, clipStart, clipEnd) {
       start: Math.max(0, s.start - clipStart),
       end: Math.min(clipEnd - clipStart, s.end - clipStart),
       placeholder: s.placeholder,
+      text: s.placeholder,
     }));
 }
 
