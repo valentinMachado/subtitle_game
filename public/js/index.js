@@ -45,9 +45,7 @@ function cleanupCacheFromConfig(validVideoIds) {
   if (changed) saveAllCachedSubtitles(all);
 }
 
-async function main(socketUrl) {
-  console.log(socketUrl);
-
+async function main() {
   /* ================= DOM ================= */
   const viewInfo = document.getElementById("viewInfo");
   const gameVideo = document.getElementById("gameVideo");

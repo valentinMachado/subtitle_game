@@ -149,3 +149,7 @@ download.js
 hide_subtitles.js
 create_srt.js
 test.js
+transcribe.js
+srt_post_process.js
+
+whisperx_env

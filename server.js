@@ -675,13 +675,6 @@ const io = socketio(server, {
 
 app.use(express.json()); // pour parser le JSON du body
 
-// dynamic html
-app.get("/index.html", (req, res) => {
-  let html = fs.readFileSync(path.join(publicDir, "/index.html"), "utf8");
-  html = html.replace("__WEBSOCKET_URL__", wsUrl);
-  res.type("html").send(html);
-});
-
 if (useAuth) {
   // Limite pour la route de login
   const loginLimiter = rateLimit({
