@@ -7,6 +7,13 @@
       "path": "./library_videos/frosty/frosty.mp4",
       "srt": "./library_videos/frosty/frosty.srt",
       "vtt": "./library_videos/frosty/frosty.vtt"
+    },
+    {
+      "id": "battal-gazi-nin-intikam-eski-turk-filmi-tek-parca",
+      "lang": "langue",
+      "path": "./library_videos/battal-gazi-nin-intikam-eski-turk-filmi-tek-parca/battal-gazi-nin-intikam-eski-turk-filmi-tek-parca.mp4",
+      "srt": "./library_videos/battal-gazi-nin-intikam-eski-turk-filmi-tek-parca/battal-gazi-nin-intikam-eski-turk-filmi-tek-parca.srt",
+      "vtt": "./library_videos/battal-gazi-nin-intikam-eski-turk-filmi-tek-parca/battal-gazi-nin-intikam-eski-turk-filmi-tek-parca.vtt"
     }
   ],
   "clipSaves": {}

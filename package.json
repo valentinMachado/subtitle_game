@@ -1,6 +1,6 @@
 {
   "name": "subtitle_game",
-  "version": "5.0.0",
+  "version": "6.0.0",
   "bin": "server.js",
   "pkg": {
     "assets": [
@@ -28,7 +28,7 @@
     "pm2": "pm2 start npm --name \"subtitle_game\" -- run deploy && pm2 save",
     "deploy": "node ./generate-secret.js && node server.js --binaries=false --wsUrl=https://mache.lol",
     "start": "node server.js --binaries=false",
-    "build-windows": "node ./copy-socket-client.js  && npx pkg server.js --targets node18-win-x64 --output ./subtitle_game.exe"
+    "build-window": "node ./copy-socket-client.js  && npx pkg server.js --targets node18-win-x64 --output ./subtitle_game.exe"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

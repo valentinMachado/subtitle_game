@@ -641,26 +641,53 @@ const render = async () => {
 // ---------- EXPRESS + SOCKET.IO ----------
 const app = express();
 
-function getLocalIP() {
+function getSortedIPCandidates() {
   const interfaces = os.networkInterfaces();
+  const candidates = [];
+
   for (const name of Object.keys(interfaces)) {
     for (const iface of interfaces[name]) {
-      // on veut une IPv4 qui n’est pas interne (pas 127.0.0.1)
-      if (iface.family === "IPv4" && !iface.internal) {
-        return iface.address;
+      // On ignore IPv6 et les adresses internes
+      if (iface.family !== "IPv4" || iface.internal) continue;
+
+      let score = 0;
+
+      // 1. Analyse du nom de l'interface
+      const isVirtual = /vbox|docker|veth|vmnet|wsl|virtual/i.test(name);
+      if (!isVirtual) score += 10;
+
+      // 2. Analyse de la plage d'IP (Priorité aux réseaux locaux classiques)
+      if (iface.address.startsWith("192.168.")) {
+        score += 20;
+      } else if (
+        iface.address.startsWith("10.") ||
+        (iface.address.startsWith("172.") && !isVirtual)
+      ) {
+        score += 5;
       }
+
+      candidates.push({
+        address: iface.address,
+        interface: name,
+        score: score,
+      });
     }
   }
-  return "localhost";
+
+  // Tri du plus probable (score haut) au moins probable
+  return candidates.sort((a, b) => b.score - a.score).map((c) => c.address);
 }
 
 const PORT = 3000;
 const server = app.listen(PORT, "0.0.0.0", () => {
-  const localIP = getLocalIP();
   console.log(`Serveur démarré :`);
   console.log(`- Local : http://localhost:${PORT}`);
+  // Utilisation
+  const ips = getSortedIPCandidates();
+  console.log("Adresse Ipv4 trouvées :", ips);
   console.log(
-    `- Réseau : http://${localIP}:${PORT} (accessible depuis d'autres appareils)`
+    "Accessible depuis d'autres navigateurs à l'adresse :",
+    ips[0] + ":3000"
   );
 });
 
